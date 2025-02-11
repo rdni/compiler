@@ -1,0 +1,3 @@
+fn assert_std_works(testing: string) {
+    print("Working (test string: %s)", testing);
+}

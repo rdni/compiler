@@ -1,0 +1,112 @@
+#!/bin/bash
+
+cargo run --release -- /examples/final.lang
+if [ $? -ne 0 ]; then
+    echo "Compile failed"
+    exit 1
+else
+    ./build/output
+fi
+
+
+
+# # Check if GCC is installed, and if not, use Clang
+# if ! command -v gcc &> /dev/null; then
+#     use_clang=true
+#     if ! command -v clang &> /dev/null; then
+#         echo "Could not find Clang or GCC"
+#         exit 1
+#     fi
+# fi
+
+# # Ensure Rust is installed
+# if ! command -v cargo &> /dev/null; then
+#     echo "Rust not found"
+#     exit 1
+# fi
+
+# # Ensure LLVM is installed
+# if ! command -v llc &> /dev/null; then
+#     echo "LLVM not found"
+    
+#     # Install llvmenv
+#     if ! command -v llvmenv &> /dev/null; then
+#         cargo install llvmenv
+
+#         if ! command -v llvmenv &> /dev/null; then
+#             echo "Could not install llvmenv"
+#             exit 1
+#         fi
+
+#         llvmenv init
+#         llvmenv global 14.0.0
+#         llvmenv local 14.0.0
+
+#         if ! command -v llvm-config &> /dev/null; then
+#             echo "LLVM not found"
+#             exit 1
+#         fi
+#     else
+#         llvmenv init
+#         llvmenv global 14.0.0
+#         llvmenv local 14.0.0
+#     fi
+# fi
+
+# start=`date +%s%3N`
+
+# cargo run --release
+
+# if [ -f "out.ll" ]; then
+#     if [ "$1" = "--print-llvm-ir" ]; then
+#         cat out.ll
+#     fi
+
+#     echo "Building:"
+
+#     llc -filetype=obj -relocation-model=pic out.ll -o out.o
+
+#     if [ "$use_clang" = true ]; then
+#         clang -fPIE -pie -o output out.o &> /dev/null
+#     else
+#         gcc -fPIE -pie -o output out.o &> /dev/null
+#     fi
+
+#     end=`date +%s%3N`
+
+#     build_time=$(($end - $start))
+
+#     if [ $build_time -lt 1000 ]; then
+#         echo "Built in ${build_time} milliseconds"
+#     else
+#         echo "Built in $(($build_time / 1000)) seconds"
+#     fi
+
+#     if [ -f "output" ]; then
+#         echo "Running:"
+
+#         run_start=`date +%s%3N`
+
+#         ./output
+#         echo "Exited with code: $?"
+        
+#         run_end=`date +%s%3N`
+        
+#         run_time=$(($run_end - $run_start))
+
+#         if [ $run_time -lt 1000 ]; then
+#             echo "Ran in ${run_time} milliseconds"
+#         else
+#             echo "Ran in $(($run_time / 1000)) seconds"
+#         fi
+#     else
+#         echo "Build failed"
+#         # rm out.ll out.o output
+#         exit 1
+#     fi
+
+#     rm out.o output # out.ll
+# else
+#     echo "Failed to generate out.ll"
+#     exit 1
+# fi

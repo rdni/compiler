@@ -1,0 +1,61 @@
+let aasd: __i8ptr__ = 7;
+
+assert_std_works("working");
+
+struct Question {
+    question_text: string,
+    option_1: string,
+    option_2: string,
+    option_3: string,
+    option_4: string,
+    answer: string
+}
+
+fn ask_question(question: Question) -> bool {
+    print(question.question_text);
+    print("A: " + question.option_1);
+    print("B: " + question.option_2);
+    print("C: " + question.option_3);
+    print("D: " + question.option_4);
+
+    let user_input = string_input(64);
+
+    return user_input == question.answer;
+}
+
+let question = new Question {
+    question_text: "What is 1 + 1?",
+    option_1: "4",
+    option_2: "2",
+    option_3: "13",
+    option_4: "11",
+    answer: "B"
+};
+
+if ask_question(question) {
+    print("Correct!");
+} else {
+    print("Incorrect!");
+}
+
+struct Testing {
+    field: string,
+    e: int
+}
+
+let a = new Testing {
+    field: "aasdaws",
+    e: 5
+};
+
+print("%s %d", a.field, a.e);
+
+a.e = 10;
+// (a.(field + "dfasdf"))
+a.field = a.field + "dfasdf";
+
+print("%s %d", a.field, a.e);
+
+a.field = ".\n.\x3F.\t.";
+
+print("%s", a.field);
