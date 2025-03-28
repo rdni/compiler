@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use thiserror::Error;
 
 use crate::Position;
@@ -27,6 +29,7 @@ impl Error {
             ErrorImpl::UnexpectedTokenDetailed { .. } => "UnexpectedTokenDetailed",
             ErrorImpl::NumberParseError { .. } => "NumberParseError",
             ErrorImpl::VariableAlreadyDeclared { .. } => "VariableAlreadyDeclared",
+            ErrorImpl::VariableNotDeclared { .. } => "VariableNotDeclared",
             ErrorImpl::UnexpectedArguments { .. } => "UnexpectedArguments",
             ErrorImpl::MissingArguments { .. } => "MissingArguments",
             ErrorImpl::ArgumentTypeMatchError { .. } => "ArgumentTypeMatchError",
@@ -34,6 +37,40 @@ impl Error {
             ErrorImpl::TypeMatchError { .. } => "TypeMatchError",
             ErrorImpl::ExpectedExplicitValue => "ExpectedExplicitValue",
             ErrorImpl::FunctionAlreadyDeclared { .. } => "FunctionAlreadyDeclared",
+            ErrorImpl::UnknownType { .. } => "UnknownType"
+        }
+    }
+
+    pub fn get_tip(&self) -> ErrorTip {
+        match &self.internal_error {
+            ErrorImpl::UnrecognisedToken { .. } => ErrorTip::None,
+            ErrorImpl::UnexpectedToken { token } => ErrorTip::Suggestion(format!("Unexpected token: `{}`, did you miss a semicolon?", token)),
+            ErrorImpl::UnexpectedTokenDetailed { token, message } => ErrorTip::Suggestion(format!("Unexpected token: `{}`, {}", token, message)),
+            ErrorImpl::NumberParseError { token } => ErrorTip::Suggestion(format!("Invalid number: `{}`, is it above the integer limit?", token)),
+            ErrorImpl::VariableAlreadyDeclared { variable } => ErrorTip::Suggestion(format!("Variable `{}` already declared", variable)),
+            ErrorImpl::VariableNotDeclared { variable } => ErrorTip::Suggestion(format!("Variable `{}` not declared", variable)),
+            ErrorImpl::UnexpectedArguments { expected, received } => ErrorTip::Suggestion(format!("Expected {} arguments, received {}", expected, received)),
+            ErrorImpl::MissingArguments { expected, received } => ErrorTip::Suggestion(format!("Expected {} arguments, received {}", expected, received)),
+            ErrorImpl::ArgumentTypeMatchError { expected, received } => ErrorTip::Suggestion(format!("Expected argument type `{}`, received `{}`", expected, received)),
+            ErrorImpl::FieldTypeMatchError { expected, received } => ErrorTip::Suggestion(format!("Expected field type `{}`, received `{}`", expected, received)),
+            ErrorImpl::TypeMatchError { expected, received } => ErrorTip::Suggestion(format!("Expected type `{}`, received `{}`", expected, received)),
+            ErrorImpl::ExpectedExplicitValue => ErrorTip::Suggestion(String::from("Expected explicit value when no type is given")),
+            ErrorImpl::FunctionAlreadyDeclared { function } => ErrorTip::Suggestion(format!("Function `{}` already declared", function)),
+            ErrorImpl::UnknownType { type_ } => ErrorTip::Suggestion(format!("Unknown type `{}` found", type_))
+        }
+    }
+}
+
+pub enum ErrorTip {
+    None,
+    Suggestion(String)
+}
+
+impl Display for ErrorTip {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ErrorTip::None => write!(f, ""),
+            ErrorTip::Suggestion(suggestion) => write!(f, "{}", suggestion)
         }
     }
 }
@@ -59,6 +96,10 @@ pub enum ErrorImpl {
     },
     #[error("variable {variable:?} already declared")]
     VariableAlreadyDeclared {
+        variable: String
+    },
+    #[error("variable {variable:?} not declared")]
+    VariableNotDeclared {
         variable: String
     },
     #[error("unexpected arguments: expected {expected:?}, received {received:?}")]
@@ -92,4 +133,8 @@ pub enum ErrorImpl {
     FunctionAlreadyDeclared {
         function: String
     },
+    #[error("unknown type {type_} found")]
+    UnknownType {
+        type_: String
+    }
 }

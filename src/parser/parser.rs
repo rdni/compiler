@@ -57,7 +57,7 @@ impl Parser {
                     Err(error.unwrap())
                 },
                 None => {
-                    Err(Error::new(ErrorImpl::UnexpectedToken { token: token.value.clone() }, self.get_position()))
+                    Err(Error::new(ErrorImpl::UnexpectedToken { token: token.value.clone() }, token.span.start.clone()))
                 }
             }
         } else {
@@ -147,8 +147,8 @@ pub fn parse(tokens: Vec<Token>, file: Rc<String>) -> (Parser, Result<BlockStmt,
 
     while parser.has_tokens() {
         let stmt = parse_stmt(&mut parser);
-        if stmt.is_ok() {
-            body.push(stmt.unwrap());
+        if let Ok(stmt) = stmt {
+            body.push(stmt);
         } else {
             println!("Error");
             // parser.advance();

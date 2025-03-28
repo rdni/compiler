@@ -6,27 +6,26 @@ use crate::{ast::ast::Stmt, lexer::lexer::tokenize, parser::parser::parse, type_
 
 use super::{compiler::Compiler, stmt::gen_statement};
 
-pub fn compile_stdlib<'a>(main_stdlib_file: PathBuf, output_file: PathBuf) {
+pub fn compile_stdlib(main_stdlib_file: PathBuf, output_file: PathBuf, context: &Context) -> Compiler {
     // Tokenize, parse, typecheck and compile the main stdlib file
     let main_stdlib = fs::read_to_string(main_stdlib_file)
         .expect("Failed to read main stdlib file");
     let main_stdlib_tokens = tokenize(main_stdlib.clone(), None).unwrap();
 
-    let main_stdlib_ast = parse(main_stdlib_tokens, Rc::new(String::from(main_stdlib)));
+    let main_stdlib_ast = parse(main_stdlib_tokens, Rc::new(main_stdlib));
 
     if main_stdlib_ast.1.is_err() {
         panic!("Failed to parse main stdlib file: {:?}", main_stdlib_ast.1);
     }
 
-    let type_checker = type_check(main_stdlib_ast.1.unwrap());
+    let type_checker = type_check(main_stdlib_ast.1.unwrap(), true);
 
     if type_checker.1.is_some() {
+        println!("Error: {:?}", type_checker.1.unwrap());
         panic!("Failed to typecheck main stdlib file");
     }
 
     let type_checker = type_checker.0;
-
-    let context = Context::create();
 
     // Compile (Not using the normal compile function)
     let mut compiler = Compiler::new(
@@ -38,7 +37,7 @@ pub fn compile_stdlib<'a>(main_stdlib_file: PathBuf, output_file: PathBuf) {
             .unwrap()
             .clone(),
         type_checker,
-        &context,
+        context,
         output_file.as_os_str().to_str().unwrap()
     );
 
@@ -50,6 +49,8 @@ pub fn compile_stdlib<'a>(main_stdlib_file: PathBuf, output_file: PathBuf) {
     declare_external_functions(&mut compiler);
 
     compile_stdlib_ast(&mut compiler, output_file);
+
+    compiler
 }
 
 fn compile_stdlib_ast(compiler: &mut Compiler, output_file: PathBuf) {

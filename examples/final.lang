@@ -1,5 +1,3 @@
-let aasd: __i8ptr__ = 7;
-
 assert_std_works("working");
 
 struct Question {
@@ -51,7 +49,6 @@ let a = new Testing {
 print("%s %d", a.field, a.e);
 
 a.e = 10;
-// (a.(field + "dfasdf"))
 a.field = a.field + "dfasdf";
 
 print("%s %d", a.field, a.e);

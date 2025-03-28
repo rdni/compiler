@@ -1,6 +1,6 @@
 use inkwell::{types::{BasicType, BasicTypeEnum}, values::{BasicMetadataValueEnum, BasicValueEnum}, IntPredicate};
 
-use crate::{ast::{ast::{Expr, ExprType, Type, TypeType}, expressions::{NumberExpr, StringExpr, SymbolExpr}, types::{self, Literals, StructType}}, type_checker::typed_ast::{TypedAssignmentExpr, TypedBinaryExpr, TypedCallExpr, TypedExpr, TypedExprWrapper, TypedStructInitExpr, TypedSymbolExpr}};
+use crate::{ast::{ast::{Expr, ExprType, Type, TypeType}, expressions::{NumberExpr, StringExpr}, types::{self, Literals, StructType}}, type_checker::typed_ast::{TypedAssignmentExpr, TypedBinaryExpr, TypedCallExpr, TypedExpr, TypedExprWrapper, TypedStructInitExpr, TypedSymbolExpr}};
 
 use super::compiler::Compiler;
 
@@ -12,7 +12,9 @@ pub fn gen_expression<'a>(compiler: &Compiler<'a>, expression: &TypedExprWrapper
             let call_expr = expression.as_any().downcast_ref::<TypedCallExpr>().unwrap();
 
             let symbol = call_expr.callee.as_any().downcast_ref::<types::FunctionType>().unwrap().name.clone();
-            let function = compiler.module.get_function(&symbol).expect(&format!("Function {} not found", symbol));
+            let function = compiler.module.get_function(&symbol).unwrap_or_else(|| {
+                panic!("Function {} not found", symbol);
+            });
             
             let args: Vec<BasicMetadataValueEnum<'a>> = call_expr.arguments.iter().map(|arg| gen_expression(compiler, arg).into()).collect();
 
@@ -61,6 +63,12 @@ pub fn gen_expression<'a>(compiler: &Compiler<'a>, expression: &TypedExprWrapper
                         "*" => compiler.builder.build_int_mul(left.into_int_value(), right.into_int_value(), "").unwrap().into(),
                         "/" => compiler.builder.build_int_signed_div(left.into_int_value(), right.into_int_value(), "").unwrap().into(),
                         "%" => compiler.builder.build_int_signed_rem(left.into_int_value(), right.into_int_value(), "").unwrap().into(),
+                        "==" => compiler.builder.build_int_compare(IntPredicate::EQ, left.into_int_value(), right.into_int_value(), "").unwrap().into(),
+                        "!=" => compiler.builder.build_int_compare(IntPredicate::NE, left.into_int_value(), right.into_int_value(), "").unwrap().into(),
+                        "<" => compiler.builder.build_int_compare(IntPredicate::SLT, left.into_int_value(), right.into_int_value(), "").unwrap().into(),
+                        "<=" => compiler.builder.build_int_compare(IntPredicate::SLE, left.into_int_value(), right.into_int_value(), "").unwrap().into(),
+                        ">" => compiler.builder.build_int_compare(IntPredicate::SGT, left.into_int_value(), right.into_int_value(), "").unwrap().into(),
+                        ">=" => compiler.builder.build_int_compare(IntPredicate::SGE, left.into_int_value(), right.into_int_value(), "").unwrap().into(),
                         _ => panic!("Invalid operator")
                     }
                 },
@@ -113,7 +121,7 @@ pub fn gen_expression<'a>(compiler: &Compiler<'a>, expression: &TypedExprWrapper
 
                 return value;
             } else {
-                let alloca = compiler.named_allocas.get(&assignment_expr.assignee.as_any().downcast_ref::<SymbolExpr>().unwrap().value).expect("Variable not found");
+                let alloca = compiler.named_allocas.get(&assignment_expr.assignee.as_any().downcast_ref::<TypedSymbolExpr>().unwrap().value).expect("Variable not found");
                 compiler.builder.build_store(*alloca, value).unwrap();
             }
 

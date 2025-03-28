@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc, sync::{Arc, Mutex}};
+use std::{collections::{hash_map::Entry, HashMap}, rc::Rc, sync::{Arc, Mutex}};
 
 use crate::{ast::{ast::{Expr, ExprType, ExprWrapper, Stmt, StmtType, StmtWrapper, Type, TypeType, TypeWrapper}, expressions::{AssignmentExpr, BinaryExpr, CallExpr, NumberExpr, PrefixExpr, StringExpr, StructInitExpr, SymbolExpr}, statements::{BlockStmt, ExpressionStmt, FnDeclStmt, IfStmt, ReturnStmt, StructDeclStmt, VarDeclStmt}, types::{ArrayType, FunctionType, LiteralType, Literals, StructType, SymbolType}}, errors::errors::{Error, ErrorImpl}, Position};
 
@@ -12,6 +12,9 @@ pub struct Environment {
     pub function: Option<FnDeclStmt>
 }
 
+unsafe impl Send for Environment {}
+unsafe impl Sync for Environment {}
+
 impl Environment {
     pub fn new(id: i32) -> Self {
         Environment {
@@ -21,13 +24,16 @@ impl Environment {
             function: None
         }
     }
-    
+
     pub fn declare_variable(&mut self, variable_name: String, variable_type: TypeWrapper, is_constant: bool, current_position: Position) -> Result<(), Error> {
-        if self.variable_lookup.contains_key(&variable_name) {
-            Err(Error::new(ErrorImpl::VariableAlreadyDeclared { variable: variable_name }, current_position))
-        } else {
-            self.variable_lookup.insert(variable_name, (is_constant, variable_type));
-            Ok(())
+        match self.variable_lookup.entry(variable_name.clone()) {
+            Entry::Occupied(_) => {
+                Err(Error::new(ErrorImpl::VariableAlreadyDeclared { variable: variable_name }, current_position))
+            }
+            Entry::Vacant(entry) => {
+                entry.insert((is_constant, variable_type));
+                Ok(())
+            }
         }
     }
 
@@ -81,30 +87,28 @@ impl TypeChecker {
         }
     }
 
-    pub fn fetch_variable_type(&mut self, variable: String) -> Option<(bool, TypeWrapper)> {
+    pub fn fetch_variable_type(&mut self, variable: String, position: Position) -> Result<(bool, TypeWrapper), Error> {
         // Check if it's a reserved variable first
         if self.built_in_types.contains_key(&variable) {
-            Some((true, self.built_in_types.get(&variable).unwrap().clone_wrapper()))
+            Ok((true, self.built_in_types.get(&variable).unwrap().clone_wrapper()))
         } else if self.globals.contains_key(&variable) {
             self.used_globals.insert(variable.clone(), self.globals.get(&variable).unwrap().clone_wrapper());
-            Some((true, self.globals.get(&variable).unwrap().clone_wrapper()))
+            Ok((true, self.globals.get(&variable).unwrap().clone_wrapper()))
+        } else if self.get_current_environment().lock().unwrap().get_variable(&variable).is_some() {
+            let current_env = self.get_current_environment();
+            let environment = current_env.lock().unwrap();
+            let var = environment.get_variable(&variable).unwrap();
+            Ok((var.0, var.1.clone_wrapper()))
         } else {
-            if self.get_current_environment().lock().unwrap().get_variable(&variable).is_some() {
-                let current_env = self.get_current_environment();
-                let environment = current_env.lock().unwrap();
-                let var = environment.get_variable(&variable).unwrap();
-                Some((var.0, var.1.clone_wrapper()))
-            } else {
-                for env_number in 0..(self.environment_path.len()) {
-                    if self.get_nth_parent_environment(env_number).unwrap().lock().unwrap().get_variable(&variable).is_some() {
-                        let nth_parent_env = self.get_nth_parent_environment(env_number).unwrap();
-                        let nth_parent_env = nth_parent_env.lock().unwrap();
-                        let var = nth_parent_env.get_variable(&variable).unwrap();
-                        return Some((var.0, var.1.clone_wrapper()));
-                    }
+            for env_number in 0..(self.environment_path.len()) {
+                if self.get_nth_parent_environment(env_number).unwrap().lock().unwrap().get_variable(&variable).is_some() {
+                    let nth_parent_env = self.get_nth_parent_environment(env_number).unwrap();
+                    let nth_parent_env = nth_parent_env.lock().unwrap();
+                    let var = nth_parent_env.get_variable(&variable).unwrap();
+                    return Ok((var.0, var.1.clone_wrapper()));
                 }
-                return None;
             }
+            Err(Error::new(ErrorImpl::UnknownType { type_: variable }, position))
         }
     }
 
@@ -112,7 +116,7 @@ impl TypeChecker {
         match ty.get_type_type() {
             TypeType::Symbol(_) => {
                 let symbol = ty.as_any().downcast_ref::<SymbolType>().unwrap();
-                self.fetch_variable_type(symbol.name.clone()).unwrap().1
+                self.fetch_variable_type(symbol.name.clone(), symbol.get_position()).unwrap().1
             },
             TypeType::Array(_) => {
                 TypeWrapper::new(ArrayType {
@@ -132,17 +136,20 @@ pub fn type_check_expr(type_checker: &mut TypeChecker, ast: ExprWrapper) -> Resu
             let assignment = ast.as_any().downcast_ref::<AssignmentExpr>().unwrap();
             let value = type_check_expr(type_checker, assignment.value.clone_wrapper())?;
             let assignee = type_check_expr(type_checker, assignment.assignee.clone_wrapper())?;
-            assert!(TypedExpr::get_type(&value).get_type_type() == TypedExpr::get_type(&assignee).get_type_type());
-            
-            Ok(TypedExprWrapper::new(TypedAssignmentExpr {
-                span: ast.get_span().clone(),
-                assignee,
-                operator: assignment.operator.clone(),
-                value
-            }))
+
+            if TypedExpr::get_type(&value).get_type_type() != TypedExpr::get_type(&assignee).get_type_type() {
+                Err(Error::new(ErrorImpl::TypeMatchError { expected: format!("{:?}", TypedExpr::get_type(&assignee).get_type_type()), received: format!("{:?}", TypedExpr::get_type(&value).get_type_type()) }, value.get_span().start.clone()))
+            } else {
+                Ok(TypedExprWrapper::new(TypedAssignmentExpr {
+                    span: ast.get_span().clone(),
+                    assignee,
+                    operator: assignment.operator.clone(),
+                    value
+                }))
+            }
         },
         ExprType::Binary => {
-            if ast.as_any().downcast_ref::<BinaryExpr>().unwrap().operator.value == String::from(".") {
+            if ast.as_any().downcast_ref::<BinaryExpr>().unwrap().operator.value == "." {
                 // Member expression
                 let binary = ast.as_any().downcast_ref::<BinaryExpr>().unwrap();
                 let left = type_check_expr(type_checker, binary.left.clone_wrapper())?;
@@ -178,36 +185,41 @@ pub fn type_check_expr(type_checker: &mut TypeChecker, ast: ExprWrapper) -> Resu
         },
         ExprType::Symbol => {
             let symbol = ast.as_any().downcast_ref::<SymbolExpr>().unwrap();
-            let var = type_checker.fetch_variable_type(symbol.value.clone());
+            let var = type_checker.fetch_variable_type(symbol.value.clone(), symbol.get_span().start.clone());
+
+            if var.is_err() {
+                return Err(Error::new(ErrorImpl::VariableNotDeclared { variable: symbol.value.clone() }, symbol.get_span().start.clone()));
+            }
 
             Ok(TypedExprWrapper::new(TypedSymbolExpr {
                 span: ast.get_span().clone(),
                 value: symbol.value.clone(),
-                var_type: var.expect(&format!("Variable not `{}` found", symbol.value)).1.clone_wrapper()
+                var_type: var.unwrap_or_else(|_| panic!("Variable not `{}` found", symbol.value)).1.clone_wrapper()
             }))
         },
         ExprType::CallExpr => {
             let call = ast.as_any().downcast_ref::<CallExpr>().unwrap();
-            let function_type = TypedExpr::get_type(&type_check_expr(type_checker, call.callee.clone_wrapper()).unwrap());
+            let function_type = TypedExpr::get_type(&type_check_expr(type_checker, call.callee.clone_wrapper())?);
             let function = function_type.as_any().downcast_ref::<FunctionType>().unwrap();
 
-            let arguments: Vec<TypedExprWrapper> = call.arguments.iter().map(|arg| type_check_expr(type_checker, arg.clone_wrapper()).unwrap()).collect();
+            let mut arguments = vec![];
+            for arg in call.arguments.iter() {
+                arguments.push(type_check_expr(type_checker, arg.clone_wrapper())?);
+            }
 
-            if arguments.len() > function.arguments.len() && function.is_var_args == false {
+            if arguments.len() > function.arguments.len() && !function.is_var_args {
                 return Err(Error::new(ErrorImpl::UnexpectedArguments { expected: function.arguments.len(), received: arguments.len() }, arguments[function.arguments.len()].get_span().start.clone()));
             } else if arguments.len() < function.arguments.len() {
                 return Err(Error::new(ErrorImpl::MissingArguments { expected: function.arguments.len(), received: arguments.len() }, arguments.last().unwrap().get_span().end.clone()));
             }
 
-            let mut argument_number = 0;
-            for argument in function.arguments.iter() {
+            for (argument_number, argument) in function.arguments.iter().enumerate() {
                 if TypedExpr::get_type(&arguments[argument_number]).get_type_type() != argument.1.get_type_type() {
                     return Err(Error::new(ErrorImpl::ArgumentTypeMatchError {
                         expected: format!("{:?}", argument.1.get_type_type()),
                         received: format!("{:?}", TypedExpr::get_type(&arguments[argument_number]).get_type_type())
                     }, arguments[argument_number].get_span().start.clone()));
                 }
-                argument_number += 1;
             }
 
             Ok(TypedExprWrapper::new(TypedCallExpr {
@@ -218,7 +230,7 @@ pub fn type_check_expr(type_checker: &mut TypeChecker, ast: ExprWrapper) -> Resu
         },
         ExprType::StructInit => {
             let struct_init = ast.as_any().downcast_ref::<StructInitExpr>().unwrap();
-            let struct_type = type_checker.fetch_variable_type(struct_init.name.clone()).unwrap().1.clone_wrapper();
+            let struct_type = type_checker.fetch_variable_type(struct_init.name.clone(), struct_init.span.start.clone()).unwrap().1.clone_wrapper();
             let struct_type = struct_type.as_any().downcast_ref::<StructType>().unwrap();
 
             let mut fields = vec![];
@@ -261,17 +273,15 @@ pub fn type_check_stmt(type_checker: &mut TypeChecker, ast: StmtWrapper) -> Resu
             if var_decl_stmt.explicit_type.is_some() {
                 if var_decl_stmt.assigned_value.is_some() {
                     if let TypeType::Symbol(_) = var_decl_stmt.explicit_type.as_ref().unwrap().get_type_type() {
-                        let name = var_decl_stmt.explicit_type.as_ref().unwrap().as_any().downcast_ref::<SymbolType>().unwrap().name.clone();
-                        let explicit_type = type_checker.fetch_variable_type(name).unwrap().1;
+                        let symbol_type = var_decl_stmt.explicit_type.as_ref().unwrap().as_any().downcast_ref::<SymbolType>().unwrap();
+                        let explicit_type = type_checker.fetch_variable_type(symbol_type.name.clone(), symbol_type.get_position())?.1;
                         let actual_type = type_check_expr(type_checker, var_decl_stmt.assigned_value.as_ref().unwrap().clone_wrapper())?;
                         
-                        if TypedExpr::get_type(&actual_type).get_type_type() != explicit_type.get_type_type() {
-                            if explicit_type.get_type_type() != TypeType::Literal(Literals::InternalI8Pointer) {
-                                return Err(Error::new(ErrorImpl::TypeMatchError {
-                                    expected: format!("{:?}", explicit_type.get_type_type()),
-                                    received: format!("{:?}", TypedExpr::get_type(&actual_type).get_type_type())
-                                }, actual_type.get_span().start.clone()));
-                            }
+                        if TypedExpr::get_type(&actual_type).get_type_type() != explicit_type.get_type_type() && explicit_type.get_type_type() != TypeType::Literal(Literals::InternalI8Pointer) {
+                            return Err(Error::new(ErrorImpl::TypeMatchError {
+                                expected: format!("{:?}", explicit_type.get_type_type()),
+                                received: format!("{:?}", TypedExpr::get_type(&actual_type).get_type_type())
+                            }, actual_type.get_span().start.clone()));
                         }
                         type_checker.get_current_environment().lock().unwrap().declare_variable(var_decl_stmt.identifier.clone(), explicit_type.clone_wrapper(), var_decl_stmt.is_constant, var_decl_stmt.get_span().start.clone())?;
                         Ok(TypedStmtWrapper::new(TypedVarDeclStmt {
@@ -289,20 +299,18 @@ pub fn type_check_stmt(type_checker: &mut TypeChecker, ast: StmtWrapper) -> Resu
                     todo!();
                     // Only support symbol types for now
                 }
+            } else if var_decl_stmt.assigned_value.is_none() {
+                Err(Error::new(ErrorImpl::ExpectedExplicitValue, var_decl_stmt.get_span().end.clone()))
             } else {
-                if var_decl_stmt.assigned_value.is_none() {
-                    Err(Error::new(ErrorImpl::ExpectedExplicitValue, var_decl_stmt.get_span().end.clone()))
-                } else {
-                    let expr = type_check_expr(type_checker, var_decl_stmt.assigned_value.as_ref().unwrap().clone_wrapper())?;
-                    type_checker.get_current_environment().lock().unwrap().declare_variable(var_decl_stmt.identifier.clone(), TypedExpr::get_type(&expr), var_decl_stmt.is_constant, var_decl_stmt.get_span().start.clone())?;
-                    Ok(TypedStmtWrapper::new(TypedVarDeclStmt {
-                        identifier: var_decl_stmt.identifier.clone(),
-                        is_constant: var_decl_stmt.is_constant,
-                        var_type: TypedExpr::get_type(&expr),
-                        assigned_value: Some(expr),
-                        span: var_decl_stmt.get_span().clone()
-                    }))
-                }
+                let expr = type_check_expr(type_checker, var_decl_stmt.assigned_value.as_ref().unwrap().clone_wrapper())?;
+                type_checker.get_current_environment().lock().unwrap().declare_variable(var_decl_stmt.identifier.clone(), TypedExpr::get_type(&expr), var_decl_stmt.is_constant, var_decl_stmt.get_span().start.clone())?;
+                Ok(TypedStmtWrapper::new(TypedVarDeclStmt {
+                    identifier: var_decl_stmt.identifier.clone(),
+                    is_constant: var_decl_stmt.is_constant,
+                    var_type: TypedExpr::get_type(&expr),
+                    assigned_value: Some(expr),
+                    span: var_decl_stmt.get_span().clone()
+                }))
             }
         },
         StmtType::IfStmt => {
@@ -319,7 +327,7 @@ pub fn type_check_stmt(type_checker: &mut TypeChecker, ast: StmtWrapper) -> Resu
             let fn_decl_stmt = ast.as_any().downcast_ref::<FnDeclStmt>().unwrap();
 
             if type_checker.get_current_environment().lock().unwrap().get_variable(&fn_decl_stmt.identifier).is_some() {
-                return Err(Error::new(ErrorImpl::FunctionAlreadyDeclared { function: fn_decl_stmt.identifier.clone() }, fn_decl_stmt.get_span().end.clone()));
+                return Err(Error::new(ErrorImpl::FunctionAlreadyDeclared { function: fn_decl_stmt.identifier.clone() }, fn_decl_stmt.get_span().start.clone()));
             }
 
             type_checker.add_environment(Environment {
@@ -333,11 +341,10 @@ pub fn type_check_stmt(type_checker: &mut TypeChecker, ast: StmtWrapper) -> Resu
             for arg in fn_decl_stmt.parameters.iter() {
                 let ty = type_checker.convert_type(arg.1.clone_wrapper());
                 arguments.push((arg.0.clone(), ty.clone_wrapper()));
-                type_checker.get_current_environment().lock().unwrap().declare_variable(arg.0.clone(), ty, false, Position::null()).unwrap();
+                type_checker.get_current_environment().lock().unwrap().declare_variable(arg.0.clone(), ty, false, Position::null())?;
             }
 
             let body = Rc::new(type_check_block(type_checker, fn_decl_stmt.body.clone())?);
-
 
             type_checker.get_current_environment().lock().unwrap().declare_variable(fn_decl_stmt.identifier.clone(), TypeWrapper::new(FunctionType {
                 name: fn_decl_stmt.identifier.clone(),
@@ -346,7 +353,7 @@ pub fn type_check_stmt(type_checker: &mut TypeChecker, ast: StmtWrapper) -> Resu
                 return_type: TypeWrapper::new(LiteralType { literal: Literals::Null }),
                 arguments: arguments.iter().map(|x| (x.0.clone(), x.1.clone_wrapper())).collect::<Vec<(String, TypeWrapper)>>(),
                 is_var_args: false
-            }), false, fn_decl_stmt.span.start.clone()).unwrap();
+            }), false, fn_decl_stmt.span.start.clone())?;
 
             Ok(TypedStmtWrapper::new(TypedFnDeclStmt {
                 span: ast.get_span().clone(),
@@ -389,7 +396,8 @@ pub fn type_check_stmt(type_checker: &mut TypeChecker, ast: StmtWrapper) -> Resu
 
                     drop(environment); // Stop the lock
 
-                    let return_type = type_checker.fetch_variable_type(function.return_type.as_any().downcast_ref::<SymbolType>().unwrap().name.clone()).unwrap().1.clone_wrapper();
+                    let return_symbol = function.return_type.as_any().downcast_ref::<SymbolType>().unwrap();
+                    let return_type = type_checker.fetch_variable_type(return_symbol.name.clone(), return_symbol.get_position()).unwrap().1.clone_wrapper();
                     if return_stmt.value.is_some() {
                         let value = type_check_expr(type_checker, return_stmt.value.as_ref().unwrap().clone_wrapper())?;
                         if TypedExpr::get_type(&value).get_type_type() != return_type.get_type_type() {
@@ -412,10 +420,10 @@ pub fn type_check_stmt(type_checker: &mut TypeChecker, ast: StmtWrapper) -> Resu
                             todo!()
                         }
 
-                        return Ok(TypedStmtWrapper::new(TypedReturnStmt {
+                        Ok(TypedStmtWrapper::new(TypedReturnStmt {
                             span: ast.get_span().clone(),
                             value: Some(value)
-                        }));
+                        }))
                     } else {
                         todo!()
                     }
@@ -447,13 +455,13 @@ pub fn type_check_stmt(type_checker: &mut TypeChecker, ast: StmtWrapper) -> Resu
             for field in struct_decl_stmt.fields.iter() {
                 let ty = type_checker.convert_type(field.1.clone_wrapper());
                 fields.push((field.0.clone(), ty.clone_wrapper()));
-                type_checker.get_current_environment().lock().unwrap().declare_variable(field.0.clone(), ty, false, Position::null()).unwrap();
+                type_checker.get_current_environment().lock().unwrap().declare_variable(field.0.clone(), ty, false, Position::null())?;
             }
 
             type_checker.get_current_environment().lock().unwrap().declare_variable(struct_decl_stmt.name.clone(), TypeWrapper::new(StructType {
                 name: struct_decl_stmt.name.clone(),
                 fields: fields.iter().map(|x| (x.0.clone(), x.1.clone_wrapper())).collect::<Vec<(String, TypeWrapper)>>()
-            }), false, struct_decl_stmt.span.start.clone()).unwrap();
+            }), false, struct_decl_stmt.span.start.clone())?;
 
             Ok(TypedStmtWrapper::new(TypedStructDeclStmt {
                 span: ast.get_span().clone(),
@@ -489,7 +497,7 @@ pub fn type_check_block(type_checker: &mut TypeChecker, mut ast: BlockStmt) -> R
     Ok(typed_ast)
 }
 
-pub fn type_check(ast: BlockStmt) -> (TypeChecker, Option<Error>) {
+pub fn type_check(ast: BlockStmt, is_std_lib: bool) -> (TypeChecker, Option<Error>) {
     // Loop through the body, keeping track of different types
     // Store current scope
     let mut type_checker = TypeChecker {
@@ -508,7 +516,9 @@ pub fn type_check(ast: BlockStmt) -> (TypeChecker, Option<Error>) {
     type_checker.built_in_types.insert(String::from("bool"), TypeWrapper::new(LiteralType { literal: Literals::Boolean }));
 
     // Built internal std types
-    type_checker.built_in_types.insert(String::from("__i8ptr__"), TypeWrapper::new(LiteralType { literal: Literals::InternalI8Pointer }));
+    if is_std_lib {
+        type_checker.built_in_types.insert(String::from("__i8ptr__"), TypeWrapper::new(LiteralType { literal: Literals::InternalI8Pointer }));
+    }
 
     // Built in functions
     type_checker.globals.insert(String::from("print"), TypeWrapper::new(FunctionType { 
@@ -554,10 +564,12 @@ pub fn type_check(ast: BlockStmt) -> (TypeChecker, Option<Error>) {
 
     let block = type_check_block(&mut type_checker, ast);
 
-    if block.is_err() {
-        (type_checker, Some(block.err().unwrap()))
-    } else {
-        type_checker.typed_ast.push(block.unwrap().clone_typed_wrapper());
+    if let Err(err) = block {
+        (type_checker, Some(err))
+    } else if let Ok(typed_block) = block {
+        type_checker.typed_ast.push(typed_block.clone_typed_wrapper());
         (type_checker, None)
+    } else {
+        unreachable!()
     }
 }

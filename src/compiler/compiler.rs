@@ -15,7 +15,7 @@ pub struct Compiler<'a> {
 
     pub named_allocas: HashMap<String, PointerValue<'a>>,
     pub named_structs: HashMap<String, StructType<'a>>,
-
+    
     pub context: &'a Context,
     pub module: Module<'a>,
     pub builder: Builder<'a>
@@ -379,7 +379,7 @@ impl<'a> Compiler<'a> {
 
         let function = function.unwrap();
 
-        let attributes = vec![
+        let attributes = [
             self.context.create_enum_attribute(Attribute::get_named_enum_kind_id("uwtable"), 0),
             self.context.create_enum_attribute(Attribute::get_named_enum_kind_id("nounwind"), 0),
         ];
@@ -409,12 +409,11 @@ impl<'a> Compiler<'a> {
     }
 }
 
-pub fn compile(ast: TypedBlockStmt, type_checker: TypeChecker, output_file: PathBuf, file_name: &str) -> Result<(), Error> {
-    let context = Context::create();
-    let mut compiler = Compiler::new(false, ast, type_checker, &context, file_name);
+pub fn compile<'a>(ast: TypedBlockStmt, type_checker: TypeChecker, output_file: PathBuf, file_name: &str, context: &'a Context) -> Result<Compiler<'a>, Error> {
+    let mut compiler = Compiler::new(false, ast, type_checker, context, file_name);
 
     compiler.compile();
     compiler.save_module_to_file(output_file);
 
-    Ok(())
+    Ok(compiler)
 }

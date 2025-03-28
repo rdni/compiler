@@ -1,6 +1,6 @@
 use std::{any::Any, rc::Rc};
 
-use crate::type_checker::typed_ast::TypedBlockStmt;
+use crate::{type_checker::typed_ast::TypedBlockStmt, Position};
 
 use super::ast::{Type, TypeType, TypeWrapper};
 
@@ -15,7 +15,14 @@ pub enum Literals {
 
 #[derive(Debug, Clone)]
 pub struct SymbolType {
-    pub name: String // T
+    pub name: String,
+    pub position: Position
+}
+
+impl SymbolType {
+    pub fn get_position(&self) -> Position {
+        self.position.clone()
+    }
 }
 
 impl Type for SymbolType {

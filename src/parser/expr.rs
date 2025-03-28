@@ -6,7 +6,7 @@ pub fn parse_expr(parser: &mut Parser, bp: BindingPower) -> Result<ExprWrapper, 
     // First parse NUD
     let token_kind = parser.current_token_kind();
     if !parser.get_nud_lookup().contains_key(&token_kind) {
-        return Err(Error::new(ErrorImpl::UnexpectedToken { token: parser.current_token().value.clone() }, parser.get_position()));
+        return Err(Error::new(ErrorImpl::UnexpectedToken { token: parser.current_token().value.clone() }, parser.current_token().span.start.clone()));
     }
 
     let mut left = parser.get_nud_lookup().get(&token_kind).unwrap()(parser)?;
@@ -21,18 +21,18 @@ pub fn parse_expr(parser: &mut Parser, bp: BindingPower) -> Result<ExprWrapper, 
         left = parser.get_led_lookup().get(&token_kind).unwrap()(parser, left, *parser.get_bp_lookup().get(&parser.current_token_kind()).unwrap())?;
     }
 
-    return Ok(left);
+    Ok(left)
 }
 
 pub fn parse_primary_expr(parser: &mut Parser) -> Result<ExprWrapper, Error> {
     match parser.current_token_kind() {
         TokenKind::Number => {
-            let result = parser.current_token().value.parse();
+            let result = parser.current_token().value.parse::<f64>();
             
-            if result.is_err() {
-                Err(Error::new(ErrorImpl::NumberParseError { token: parser.current_token().value.clone() }, parser.get_position()))
+            if let Ok(result) = result {
+                Ok(ExprWrapper::new(NumberExpr { value: result, span: parser.advance().span.clone() }))
             } else {
-                Ok(ExprWrapper::new(NumberExpr { value: result.unwrap(), span: parser.advance().span.clone() }))
+                Err(Error::new(ErrorImpl::NumberParseError { token: parser.current_token().value.clone() }, parser.get_position()))
             }
         },
         TokenKind::Identifier => {
@@ -42,7 +42,7 @@ pub fn parse_primary_expr(parser: &mut Parser) -> Result<ExprWrapper, Error> {
             Ok(ExprWrapper::new(StringExpr { value: parser.current_token().value.clone(), span: parser.advance().span.clone() }))
         }
         _ => {
-            Err(Error::new(ErrorImpl::UnexpectedToken { token: parser.current_token().value.clone() }, parser.get_position()))
+            Err(Error::new(ErrorImpl::UnexpectedToken { token: parser.current_token().value.clone() }, parser.current_token().span.start.clone()))
         }
     }
 }
@@ -52,7 +52,7 @@ pub fn parse_binary_expr(parser: &mut Parser, left: ExprWrapper, bp: BindingPowe
 
     let right = parse_expr(parser, bp)?;
 
-    return Ok(ExprWrapper::new(BinaryExpr {
+    Ok(ExprWrapper::new(BinaryExpr {
         span: Span {
             start: left.get_span().start.clone(),
             end: right.get_span().end.clone()
@@ -60,28 +60,28 @@ pub fn parse_binary_expr(parser: &mut Parser, left: ExprWrapper, bp: BindingPowe
         left,
         operator: operator_token.clone(),
         right,
-    }));
+    }))
 }
 
 pub fn parse_prefix_expr(parser: &mut Parser) -> Result<ExprWrapper, Error> {
     let operator_token = parser.advance().clone();
     let rhs = parse_expr(parser, BindingPower::Default)?;
 
-    return Ok(ExprWrapper::new(PrefixExpr {
+    Ok(ExprWrapper::new(PrefixExpr {
         span: Span {
             start: operator_token.span.start.clone(),
             end: rhs.get_span().end.clone()
         },
         operator: operator_token,
         right_expr: rhs
-    }));
+    }))
 }
 
 pub fn parse_assignment_expr(parser: &mut Parser, left: ExprWrapper, bp: BindingPower) -> Result<ExprWrapper, Error> {
     let operator_token = parser.advance().clone();
     let rhs = parse_expr(parser, bp)?;
 
-    return Ok(ExprWrapper::new(AssignmentExpr {
+    Ok(ExprWrapper::new(AssignmentExpr {
         span: Span {
             start: left.get_span().start.clone(),
             end: rhs.get_span().end.clone()
@@ -97,7 +97,7 @@ pub fn parse_grouping_expr(parser: &mut Parser) -> Result<ExprWrapper, Error> {
     let expr = parse_expr(parser, BindingPower::Default)?;
     parser.advance();
     
-    return Ok(expr);
+    Ok(expr)
 }
 
 pub fn parse_call_expr(parser: &mut Parser, left: ExprWrapper, _bp: BindingPower) -> Result<ExprWrapper, Error> {
@@ -130,7 +130,7 @@ pub fn parse_member_expr(parser: &mut Parser, left: ExprWrapper, _bp: BindingPow
     let operator = parser.advance().clone();
     let member = parse_expr(parser, BindingPower::Primary)?;
 
-    return Ok(ExprWrapper::new(BinaryExpr {
+    Ok(ExprWrapper::new(BinaryExpr {
         span: Span {
             start: left.get_span().start.clone(),
             end: parser.get_position()
@@ -138,7 +138,7 @@ pub fn parse_member_expr(parser: &mut Parser, left: ExprWrapper, _bp: BindingPow
         left,
         operator,
         right: member,
-    }));
+    }))
 }
 
 pub fn parse_struct_init_expr(parser: &mut Parser) -> Result<ExprWrapper, Error> {

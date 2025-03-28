@@ -11,10 +11,10 @@ pub fn parse_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
     
     parser.expect(TokenKind::Semicolon)?;
 
-    return Ok(StmtWrapper::new(ExpressionStmt {
+    Ok(StmtWrapper::new(ExpressionStmt {
         span: expr.get_span().clone(),
         expression: expr,
-    }));
+    }))
 }
 
 pub fn parse_var_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
@@ -99,13 +99,12 @@ pub fn parse_if_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
     let condition = parse_expr(parser, BindingPower::Default)?;
     let body = parse_stmt(parser)?;
 
-    let else_body;
-    if parser.current_token_kind() == TokenKind::Else {
+    let else_body = if parser.current_token_kind() == TokenKind::Else {
         parser.advance();
-        else_body = Some(parse_stmt(parser)?);
+        Some(parse_stmt(parser)?)
     } else {
-        else_body = None;
-    }
+        None
+    };
 
     Ok(StmtWrapper::new(IfStmt {
         condition,
@@ -159,13 +158,12 @@ pub fn parse_fn_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
 
     parser.expect(TokenKind::CloseParen)?;
 
-    let return_type;
-    if parser.current_token_kind() == TokenKind::Arrow {
+    let return_type = if parser.current_token_kind() == TokenKind::Arrow {
         parser.advance();
-        return_type = parse_type(parser, BindingPower::Default)?;
+        parse_type(parser, BindingPower::Default)?
     } else {
-        return_type = TypeWrapper::new(LiteralType { literal: Literals::Null });
-    }
+        TypeWrapper::new(LiteralType { literal: Literals::Null })
+    };
 
     let body = parse_block_stmt(parser)?;
 
@@ -187,12 +185,11 @@ pub fn parse_fn_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
 pub fn parse_return_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
     let start = parser.advance().span.start.clone();
 
-    let value;
-    if parser.current_token_kind() != TokenKind::Semicolon {
-        value = Some(parse_expr(parser, BindingPower::Default)?);
+    let value = if parser.current_token_kind() != TokenKind::Semicolon {
+        Some(parse_expr(parser, BindingPower::Default)?)
     } else {
-        value = None;
-    }
+        None
+    };
 
     parser.expect(TokenKind::Semicolon)?;
 

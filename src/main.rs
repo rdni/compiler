@@ -1,13 +1,21 @@
 use std::{env, fs::{self, create_dir, read_to_string}, path::PathBuf, process::Command, rc::Rc, time::Instant};
 
-use compiler::{ast::ast::Stmt, compiler::{compiler::compile, stdlib::compile_stdlib}, errors::errors::Error, lexer::lexer::tokenize, parser::parser::parse, type_checker::{type_checker::type_check, typed_ast::TypedBlockStmt}};
+use compiler::{ast::ast::Stmt, compiler::{compiler::compile, stdlib::compile_stdlib}, errors::errors::{Error, ErrorTip}, get_line_at_position, lexer::lexer::tokenize, parser::parser::parse, type_checker::{type_checker::type_check, typed_ast::TypedBlockStmt}};
+use inkwell::context::Context;
 
 fn main() {
     if !PathBuf::from("build").exists() {
         create_dir("build").unwrap();
+    } else {
+        for entry in fs::read_dir("build").unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            fs::remove_file(path).unwrap();
+        }
     }
 
-    compile_stdlib(PathBuf::from("std/std.lang"), PathBuf::from("build/stdlib.ll"));
+    let context = Context::create();
+    let stdlib = compile_stdlib(PathBuf::from("std/std.lang"), PathBuf::from("build/stdlib.ll"), &context);
 
     let args: Vec<String> = env::args().collect();
 
@@ -16,17 +24,15 @@ fn main() {
     }
 
     let file_path: &str = &args[1];
-    let file_name;
-
-    if file_path.contains("/") {
-        file_name = file_path.split("/").into_iter().last().unwrap();
+    let file_name= if file_path.contains("/") {
+        file_path.split("/").last().unwrap()
     } else {
-        file_name = file_path;
-    }
+        file_path
+    };
 
     let start = Instant::now();
 
-    let mut path_buf_string = env::current_dir().unwrap().into_os_string().to_owned();
+    let mut path_buf_string = env::current_dir().unwrap().into_os_string();
     path_buf_string.push(file_path);
     let file_contents = read_to_string(path_buf_string.clone()).expect("Failed to read file!");
 
@@ -52,7 +58,7 @@ fn main() {
     let ast = parsed_ast.1.unwrap();
 
     let type_check_start = Instant::now();
-    let type_checker = type_check(ast.clone());
+    let type_checker = type_check(ast.clone(), false);
 
     println!("Type checked in {:?}", type_check_start.elapsed());
 
@@ -63,29 +69,25 @@ fn main() {
 
     let type_checker = type_checker.0;
 
+
     let compile_start = Instant::now();
-    compile(type_checker.typed_ast[0].as_any().downcast_ref::<TypedBlockStmt>().unwrap().clone(), type_checker, PathBuf::from("build/out.ll"), file_name).unwrap();
+    let compiled = compile(type_checker.typed_ast[0].as_any().downcast_ref::<TypedBlockStmt>().unwrap().clone(), type_checker, PathBuf::from("build/out.ll"), file_name, &context).unwrap();
 
     println!("Compiled in {:?}", compile_start.elapsed());
     println!("Total time for IR generation: {:?}", start.elapsed());
 
-    let llvm_link_result = Command::new("llvm-link")
-        .args(["build/stdlib.ll", "build/out.ll", "-o", "build/linked.bc"])
-        .output()
-        .expect("Failed to link stdlib and main file");
+    compiled.module.link_in_module(stdlib.module).unwrap();
 
-    if llvm_link_result.stderr.len() != 0 {
-        panic!("Failed to link stdlib and main file:\n{:?}", String::from_utf8(llvm_link_result.stderr));
-    }
+    compiled.save_module_to_file(PathBuf::from("build/out.ll"));
 
     println!("Linked stdlib and main file");
 
     let llc_result = Command::new("llc")
-        .args(["-filetype=obj",  "-relocation-model=pic", "build/linked.bc", "-o",  "build/out.o"])
+        .args(["-filetype=obj",  "-relocation-model=pic", "build/out.ll", "-o",  "build/out.o"])
         .output()
         .expect("Failed to compile using llc");
 
-    if llc_result.stderr.len() != 0 {
+    if !llc_result.stderr.is_empty() {
         panic!("Failed to compile using llc:\n{:?}", String::from_utf8(llc_result.stderr));
     }
 
@@ -97,7 +99,7 @@ fn main() {
         .expect("Failed to compile using clang");
     println!("Compiled using Clang");
 
-    if clang_result.stderr.len() != 0 {
+    if !clang_result.stderr.is_empty() {
         panic!("Failed to compile using clang:\n{:?}", String::from_utf8(clang_result.stderr));
     }
 
@@ -149,12 +151,12 @@ fn pretty_print(string: String) -> String {
 
 fn display_error(error: Error, file: PathBuf) {
     /*
-    error: message
-    -> final.lang
-       |
-    20 | let a = #;
-       | --------^
-     */
+        error: message
+        -> final.lang
+           |
+        20 | let a = #;
+           | --------^
+    */
 
     let position = error.get_position();
     let (line, line_text, line_pos) = get_line_at_position(file.clone(), position.0);
@@ -162,38 +164,31 @@ fn display_error(error: Error, file: PathBuf) {
     let line_str = line.to_string();
     let padding = line_str.len() + 2;
 
-    println!("Error: {}", error.get_error_name());
+    if let ErrorTip::None = error.get_tip() {
+        println!("Error: {}", error.get_error_name());
+    } else {
+        println!("Error: {} ({})", error.get_error_name(), error.get_tip());
+    }
     println!("-> {}", file.as_os_str().to_string_lossy());
     println!("{:>padding$}", "|");
-    println!("{} | {}", line_str, line_text.trim());
 
-    let arrows = line_pos;
+    let (line_text_removed, removed_whitespace) = remove_starting_whitespace(&line_text);
+    println!("{} | {}", line_str, line_text_removed.trim());
+
+    let arrows = line_pos - removed_whitespace + 1;
 
     println!("{:>padding$} {:->arrows$}", "|", "^");
 }
 
-pub fn get_line_at_position(file: PathBuf, position: u32) -> (usize, String, usize) {
-    let content = fs::read_to_string(&file).unwrap();
-    let pos = position as usize;
-
-    if pos >= content.len() {
-        panic!("Position exceeds file length");
-    }
-
+fn remove_starting_whitespace(string: &str) -> (String, usize) {
     let mut start = 0;
-    let mut line_number = 1; // 1-based line numbering
-
-    for line in content.split_inclusive('\n') {
-        let end = start + line.len();
-        
-        if (start..end).contains(&pos) {
-            let line_pos = pos - start;
-            return (line_number, line.to_string(), line_pos);
+    for c in string.chars() {
+        if c == ' ' {
+            start += 1;
+        } else {
+            break;
         }
-        
-        start = end;
-        line_number += 1;
     }
 
-    panic!("Failed to find line containing position");
+    (String::from(&string[start..]), start)
 }

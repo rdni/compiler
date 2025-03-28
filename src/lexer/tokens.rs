@@ -120,7 +120,8 @@ impl Token {
                 return true;
             }
         }
-        return false;
+        
+        false
     }
 
     pub fn debug(&self) {

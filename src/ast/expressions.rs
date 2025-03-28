@@ -94,7 +94,7 @@ impl Expr for SymbolExpr {
     }
     fn get_type(&self, type_checker: &mut TypeChecker) -> TypeWrapper {
         // Fetch value from type_checker
-        type_checker.fetch_variable_type(self.value.clone()).expect("Variable not defined").1.clone_wrapper()
+        type_checker.fetch_variable_type(self.value.clone(), self.span.start.clone()).expect("Variable not defined").1.clone_wrapper()
     }
     fn clone_wrapper(&self) -> ExprWrapper {
         ExprWrapper::new(self.clone())
@@ -253,7 +253,7 @@ impl Expr for StructInitExpr {
         ExprType::StructInit
     }
     fn get_type(&self, type_checker: &mut TypeChecker) -> TypeWrapper {
-        type_checker.fetch_variable_type(self.name.clone()).expect("Variable not defined").1.clone_wrapper()
+        type_checker.fetch_variable_type(self.name.clone(), self.span.start.clone()).expect("Variable not defined").1.clone_wrapper()
     }
     fn get_span(&self) -> &crate::Span {
         &self.span

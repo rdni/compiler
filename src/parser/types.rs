@@ -28,8 +28,10 @@ pub fn create_token_type_lookups(parser: &mut Parser) {
 // }
 
 pub fn parse_symbol_type(parser: &mut Parser) -> Result<TypeWrapper, Error> {
+    let token = parser.expect(TokenKind::Identifier)?;
     Ok(TypeWrapper::new(SymbolType {
-        name: parser.expect(TokenKind::Identifier)?.value
+        name: token.value.clone(),
+        position: token.span.start.clone()
     }))
 }
 
@@ -61,5 +63,5 @@ pub fn parse_type(parser: &mut Parser, bp: BindingPower) -> Result<TypeWrapper, 
         left = parser.get_type_led_lookup().get(&token_kind).unwrap()(parser, left, *parser.get_type_bp_lookup().get(&parser.current_token_kind()).unwrap())?;
     }
 
-    return Ok(left);
+    Ok(left)
 }

@@ -163,6 +163,9 @@ impl Clone for TypedBlockStmt {
 pub trait TypedExpr: Expr {
     fn get_type(&self) -> TypeWrapper;
     fn clone_typed_wrapper(&self) -> TypedExprWrapper;
+    fn is_wrapper(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Debug)]
@@ -206,7 +209,10 @@ impl TypedExpr for TypedExprWrapper {
         TypedExpr::get_type(&*self.0)
     }
     fn clone_typed_wrapper(&self) -> TypedExprWrapper {
-        TypedExprWrapper::new(self.0.clone_typed_wrapper())
+        self.0.clone_typed_wrapper()
+    }
+    fn is_wrapper(&self) -> bool {
+        true
     }
 }
 

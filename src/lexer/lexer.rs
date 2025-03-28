@@ -25,12 +25,11 @@ pub struct Lexer {
 
 impl Lexer {
     pub fn new(source: String, file: Option<String>) -> Lexer {
-        let file_name: Rc<String>;
-        if file.is_none() {
-            file_name = Rc::new(String::from("shell"));
+        let file_name = if let Some(file) = file {
+            Rc::new(file)
         } else {
-            file_name = Rc::new(file.unwrap());
-        }
+            Rc::new(String::from("shell"))
+        };
 
         Lexer {
             pos: 0,
@@ -94,7 +93,7 @@ impl Lexer {
     }
 
     pub fn remainder(&self) -> Vec<char> {
-        (self.source.as_bytes()[(self.pos as usize)..]).to_vec().into_iter().map(|x| {x as char}).collect::<Vec<char>>()
+        (self.source.as_bytes()[(self.pos as usize)..]).iter().map(|x| {*x as char}).collect::<Vec<char>>()
     }
 
     pub fn at_eof(&self) -> bool {
@@ -104,7 +103,7 @@ impl Lexer {
 
 fn number_handler(lexer: &mut Lexer, regex: Regex) {
     let remaining = &lexer.remainder().iter().collect::<String>();
-    let matched = regex.find(&remaining).unwrap().as_str().to_string();
+    let matched = regex.find(remaining).unwrap().as_str().to_string();
 
     lexer.push(MK_TOKEN!(TokenKind::Number, matched.clone(), Span { start: Position(lexer.pos as u32, Rc::clone(&lexer.file)), end: Position((lexer.pos + matched.len() as i32) as u32, Rc::clone(&lexer.file)) }));
     lexer.advance_n(matched.len() as i32);
@@ -112,7 +111,7 @@ fn number_handler(lexer: &mut Lexer, regex: Regex) {
 
 fn skip_handler(lexer: &mut Lexer, regex: Regex) {
     let remaining = &lexer.remainder().iter().collect::<String>();
-    let matched = regex.find(&remaining).unwrap().end();
+    let matched = regex.find(remaining).unwrap().end();
     lexer.advance_n(matched as i32);
 }
 
@@ -160,7 +159,7 @@ fn string_handler(lexer: &mut Lexer, regex: Regex) {
 
                         for _ in 0..2 {
                             if let Some(ch) = chars.peek() {
-                                if ch.is_digit(16) {
+                                if ch.is_ascii_hexdigit() {
                                     hex.push(*ch);
                                     chars.next();
                                 } else {
@@ -209,7 +208,7 @@ pub fn tokenize(source: String, file: Option<String>) -> Result<Vec<Token>, Erro
         
         for pattern in lex.clone().patterns.iter() {
             let string = &lex.remainder().iter().collect::<String>();
-            let match_here = pattern.regex.find(&string);
+            let match_here = pattern.regex.find(string);
 
             if match_here.is_some() && match_here.unwrap().start() == 0 {
                 (pattern.handler)(&mut lex, pattern.regex.clone());
