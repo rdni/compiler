@@ -1,3 +1,9 @@
+//! Expression code generation module.
+//!
+//! This module handles the generation of LLVM IR for all expression types,
+//! including literals, binary operations, function calls, variable access,
+//! assignments, and struct initialization.
+
 use inkwell::{
     types::{BasicType, BasicTypeEnum},
     values::{BasicMetadataValueEnum, BasicValueEnum},
@@ -19,6 +25,33 @@ use crate::{
 use super::compiler::Compiler;
 
 /// Generates LLVM IR for the given expression.
+///
+/// This function handles all expression types including:
+/// - String literals (as global string pointers)
+/// - Number literals (with optional type coercion)
+/// - Function calls
+/// - Symbol/variable references (including boolean literals)
+/// - Binary operations (arithmetic, comparison, logical, member access)
+/// - Assignment expressions
+/// - Struct initialization
+///
+/// # Arguments
+///
+/// * `compiler` - Reference to the compiler instance
+/// * `expression` - The typed expression wrapper to compile
+/// * `expected_type` - Optional expected type for type coercion (used for numbers)
+///
+/// # Returns
+///
+/// Returns the LLVM BasicValueEnum representing the computed expression value.
+///
+/// # Panics
+///
+/// Panics if:
+/// - A referenced function or variable is not found (indicates a type checking bug)
+/// - Type mismatch occurs in binary operations (indicates a type checking bug)
+/// - An invalid operator is used
+/// - An unhandled expression type is encountered
 pub fn gen_expression<'a>(
     compiler: &Compiler<'a>,
     expression: &TypedExprWrapper,
