@@ -101,11 +101,11 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    /// Saves the current LLVM module to a file in LLVM IR text format.
+    /// Saves the current LLVM module to a file.
     ///
     /// # Arguments
     ///
-    /// * `output_file` - Path where the LLVM IR file should be written
+    /// * `output_file` - Path where the module file should be written
     pub fn save_module_to_file(&self, output_file: PathBuf) {
         self.module.print_to_file(output_file).unwrap();
         // println!("{}", self.module.print_to_string().to_str().unwrap());

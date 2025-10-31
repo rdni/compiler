@@ -35,7 +35,7 @@ use super::{compiler::Compiler, expr::gen_expression};
 /// - Return statements
 /// - Struct declarations (with automatic destructor generation)
 /// - While loops
-/// - Drop statements (for manual memory management)
+/// - Drop statements (for resource cleanup and destructor calls)
 ///
 /// # Arguments
 ///

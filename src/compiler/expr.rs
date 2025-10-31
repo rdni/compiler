@@ -31,7 +31,7 @@ use super::compiler::Compiler;
 /// - Number literals (with optional type coercion)
 /// - Function calls
 /// - Symbol/variable references (including boolean literals)
-/// - Binary operations (arithmetic, comparison, logical, member access)
+/// - Binary operations (arithmetic, comparison, string operations, struct field access)
 /// - Assignment expressions
 /// - Struct initialization
 ///
