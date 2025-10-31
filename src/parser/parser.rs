@@ -1,8 +1,23 @@
 use std::{collections::HashMap, rc::Rc};
 
-use crate::{ast::statements::BlockStmt, errors::errors::{Error, ErrorImpl}, lexer::tokens::{Token, TokenKind}, Position, Span};
+use crate::{
+    ast::statements::BlockStmt,
+    errors::errors::{Error, ErrorImpl},
+    lexer::tokens::{Token, TokenKind},
+    Position, Span,
+};
 
-use super::{lookups::{create_token_lookups, BPLookup, BindingPower, LEDHandler, LEDLookup, NUDHandler, NUDLookup, StmtHandler, StmtLookup}, stmt::parse_stmt, types::{create_token_type_lookups, TypeBPLookup, TypeLEDHandler, TypeLEDLookup, TypeNUDHandler, TypeNUDLookup}};
+use super::{
+    lookups::{
+        create_token_lookups, BPLookup, BindingPower, LEDHandler, LEDLookup, NUDHandler, NUDLookup,
+        StmtHandler, StmtLookup,
+    },
+    stmt::parse_stmt,
+    types::{
+        create_token_type_lookups, TypeBPLookup, TypeLEDHandler, TypeLEDLookup, TypeNUDHandler,
+        TypeNUDLookup,
+    },
+};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -15,7 +30,7 @@ pub struct Parser {
     type_nud_lookup: TypeNUDLookup,
     type_led_lookup: TypeLEDLookup,
     type_binding_power_lookup: TypeBPLookup,
-    current_id: i32
+    current_id: i32,
 }
 
 impl Parser {
@@ -31,7 +46,7 @@ impl Parser {
             type_nud_lookup: HashMap::new(),
             type_led_lookup: HashMap::new(),
             type_binding_power_lookup: HashMap::new(),
-            current_id: 1024 // Give some space for reserved ids
+            current_id: 1024, // Give some space for reserved ids
         }
     }
 
@@ -48,17 +63,22 @@ impl Parser {
         self.tokens.get((self.pos - 1) as usize).unwrap()
     }
 
-    pub fn expect_error(&mut self, expected_kind: TokenKind, error: Option<Error>) -> Result<Token, Error> {
+    pub fn expect_error(
+        &mut self,
+        expected_kind: TokenKind,
+        error: Option<Error>,
+    ) -> Result<Token, Error> {
         let token = self.current_token();
         let kind = token.kind;
         if kind != expected_kind {
             match error {
-                Some(_) => {
-                    Err(error.unwrap())
-                },
-                None => {
-                    Err(Error::new(ErrorImpl::UnexpectedToken { token: token.value.clone() }, token.span.start.clone()))
-                }
+                Some(_) => Err(error.unwrap()),
+                None => Err(Error::new(
+                    ErrorImpl::UnexpectedToken {
+                        token: token.value.clone(),
+                    },
+                    token.span.start.clone(),
+                )),
             }
         } else {
             Ok(self.advance().clone())
@@ -107,22 +127,30 @@ impl Parser {
     }
 
     pub fn nud(&mut self, kind: TokenKind, nud_fn: NUDHandler) {
-        self.binding_power_lookup.insert(kind, BindingPower::Primary);
+        self.binding_power_lookup
+            .insert(kind, BindingPower::Primary);
         self.nud_lookup.insert(kind, nud_fn);
     }
 
     pub fn stmt(&mut self, kind: TokenKind, stmt_fn: StmtHandler) {
-        self.binding_power_lookup.insert(kind, BindingPower::Default);
+        self.binding_power_lookup
+            .insert(kind, BindingPower::Default);
         self.stmt_lookup.insert(kind, stmt_fn);
     }
 
-    pub fn type_led(&mut self, kind: TokenKind, binding_power: BindingPower, led_fn: TypeLEDHandler) {
+    pub fn type_led(
+        &mut self,
+        kind: TokenKind,
+        binding_power: BindingPower,
+        led_fn: TypeLEDHandler,
+    ) {
         self.type_binding_power_lookup.insert(kind, binding_power);
         self.type_led_lookup.insert(kind, led_fn);
     }
 
     pub fn type_nud(&mut self, kind: TokenKind, nud_fn: TypeNUDHandler) {
-        self.type_binding_power_lookup.insert(kind, BindingPower::Primary);
+        self.type_binding_power_lookup
+            .insert(kind, BindingPower::Primary);
         self.type_nud_lookup.insert(kind, nud_fn);
     }
 
@@ -144,17 +172,14 @@ pub fn parse(tokens: Vec<Token>, file: Rc<String>) -> (Parser, Result<BlockStmt,
 
     let mut body = vec![];
 
-
     while parser.has_tokens() {
         let stmt = parse_stmt(&mut parser);
         if let Ok(stmt) = stmt {
             body.push(stmt);
         } else {
-            println!("Error");
             // parser.advance();
             return (parser, Err(stmt.err().unwrap()));
         }
-        // Ignore errors until everything parsed
     }
 
     let block = Ok(BlockStmt {
@@ -162,8 +187,8 @@ pub fn parse(tokens: Vec<Token>, file: Rc<String>) -> (Parser, Result<BlockStmt,
         id: 0,
         span: Span {
             start: Position(0, Rc::clone(&file)),
-            end: parser.get_position()
-        }
+            end: parser.get_position(),
+        },
     });
 
     (parser, block)

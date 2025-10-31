@@ -1,5 +1,5 @@
-pub mod parser;
 pub mod expr;
-pub mod stmt;
 pub mod lookups;
+pub mod parser;
+pub mod stmt;
 pub mod types;

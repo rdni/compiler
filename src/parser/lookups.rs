@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{ast::ast::{ExprWrapper, StmtWrapper}, errors::errors::Error, lexer::tokens::TokenKind};
+use crate::{
+    ast::ast::{ExprWrapper, StmtWrapper},
+    errors::errors::Error,
+    lexer::tokens::TokenKind,
+};
 
 use super::{expr::*, parser::Parser, stmt::*};
 
@@ -16,7 +20,7 @@ pub enum BindingPower {
     Unary,
     Call,
     Member,
-    Primary
+    Primary,
 }
 
 pub type StmtHandler = fn(&mut Parser) -> Result<StmtWrapper, Error>;
@@ -24,11 +28,31 @@ pub type NUDHandler = fn(&mut Parser) -> Result<ExprWrapper, Error>;
 pub type LEDHandler = fn(&mut Parser, ExprWrapper, BindingPower) -> Result<ExprWrapper, Error>;
 
 pub fn create_token_lookups(parser: &mut Parser) {
-    parser.led(TokenKind::Assignment, BindingPower::Assignment, parse_assignment_expr);
-    parser.led(TokenKind::PlusEquals, BindingPower::Assignment, parse_assignment_expr);
-    parser.led(TokenKind::MinusEquals, BindingPower::Assignment, parse_assignment_expr);
-    parser.led(TokenKind::StarEquals, BindingPower::Assignment, parse_assignment_expr);
-    parser.led(TokenKind::SlashEquals, BindingPower::Assignment, parse_assignment_expr);
+    parser.led(
+        TokenKind::Assignment,
+        BindingPower::Assignment,
+        parse_assignment_expr,
+    );
+    parser.led(
+        TokenKind::PlusEquals,
+        BindingPower::Assignment,
+        parse_assignment_expr,
+    );
+    parser.led(
+        TokenKind::MinusEquals,
+        BindingPower::Assignment,
+        parse_assignment_expr,
+    );
+    parser.led(
+        TokenKind::StarEquals,
+        BindingPower::Assignment,
+        parse_assignment_expr,
+    );
+    parser.led(
+        TokenKind::SlashEquals,
+        BindingPower::Assignment,
+        parse_assignment_expr,
+    );
 
     // Logical
     parser.led(TokenKind::And, BindingPower::Logical, parse_binary_expr);
@@ -36,24 +60,61 @@ pub fn create_token_lookups(parser: &mut Parser) {
 
     // Relational
     parser.led(TokenKind::Less, BindingPower::Relational, parse_binary_expr);
-    parser.led(TokenKind::LessEquals, BindingPower::Relational, parse_binary_expr);
-    parser.led(TokenKind::Greater, BindingPower::Relational, parse_binary_expr);
-    parser.led(TokenKind::GreaterEquals, BindingPower::Relational, parse_binary_expr);
-    parser.led(TokenKind::Equals, BindingPower::Relational, parse_binary_expr);
-    parser.led(TokenKind::NotEquals, BindingPower::Relational, parse_binary_expr);
+    parser.led(
+        TokenKind::LessEquals,
+        BindingPower::Relational,
+        parse_binary_expr,
+    );
+    parser.led(
+        TokenKind::Greater,
+        BindingPower::Relational,
+        parse_binary_expr,
+    );
+    parser.led(
+        TokenKind::GreaterEquals,
+        BindingPower::Relational,
+        parse_binary_expr,
+    );
+    parser.led(
+        TokenKind::Equals,
+        BindingPower::Relational,
+        parse_binary_expr,
+    );
+    parser.led(
+        TokenKind::NotEquals,
+        BindingPower::Relational,
+        parse_binary_expr,
+    );
 
     // Additive and multiplicative
     parser.led(TokenKind::Plus, BindingPower::Additive, parse_binary_expr);
     parser.led(TokenKind::Dash, BindingPower::Additive, parse_binary_expr);
-    parser.led(TokenKind::Star, BindingPower::Multiplicative, parse_binary_expr);
-    parser.led(TokenKind::Slash, BindingPower::Multiplicative, parse_binary_expr);
-    parser.led(TokenKind::Percent, BindingPower::Multiplicative, parse_binary_expr);
+    parser.led(
+        TokenKind::Star,
+        BindingPower::Multiplicative,
+        parse_binary_expr,
+    );
+    parser.led(
+        TokenKind::Slash,
+        BindingPower::Multiplicative,
+        parse_binary_expr,
+    );
+    parser.led(
+        TokenKind::Percent,
+        BindingPower::Multiplicative,
+        parse_binary_expr,
+    );
 
     parser.led(TokenKind::OpenParen, BindingPower::Call, parse_call_expr);
 
     // Member
     parser.led(TokenKind::Dot, BindingPower::Member, parse_member_expr);
-    
+    parser.led(
+        TokenKind::OpenBracket,
+        BindingPower::Member,
+        parse_index_expr,
+    );
+
     // Literals and symbols
     parser.nud(TokenKind::Number, parse_primary_expr);
     parser.nud(TokenKind::Identifier, parse_primary_expr);
@@ -69,8 +130,12 @@ pub fn create_token_lookups(parser: &mut Parser) {
     parser.stmt(TokenKind::If, parse_if_stmt);
     parser.stmt(TokenKind::OpenCurly, parse_block_stmt);
     parser.stmt(TokenKind::Fn, parse_fn_decl_stmt);
+    parser.stmt(TokenKind::Extern, parse_extern_decl_stmt);
     parser.stmt(TokenKind::Return, parse_return_stmt);
     parser.stmt(TokenKind::Struct, parse_struct_decl_stmt);
+    parser.stmt(TokenKind::Break, parse_break_stmt);
+    parser.stmt(TokenKind::While, parse_while_stmt);
+    parser.stmt(TokenKind::Tilde, parse_drop_stmt);
 }
 
 // Lookup tables inside parser struct, so it's easier

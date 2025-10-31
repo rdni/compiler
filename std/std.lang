@@ -1,3 +1,88 @@
+extern free(str: __i8ptr__);
+extern write(file_des: i32, buf: __i8ptr__, size: i64) -> i64;
+extern read(file_des: i32, buf: __i8ptr__, size: i64) -> i64;
+extern malloc(size: i64) -> __i8ptr__;
+extern strlen(str: __i8ptr__) -> i64;
+extern realloc(ptr: __i8ptr__, size: i64) -> __i8ptr__;
+extern sprintf(dest: __i8ptr__, format: __i8ptr__, ...) -> i32;
+extern open(path: __i8ptr__, flags: i32, mode: i32) -> i32;
+
+// Converts an integer to a string
+fn itoa(value: i32) -> string {
+    let malloc_size: i64 = 32;
+    let buf: __i8ptr__ = malloc(malloc_size);
+    let format: __i8ptr__ = "%d";
+    sprintf(buf, format, value);
+
+    let converted_buf: string = buf;
+
+    return converted_buf;
+}
+
+// Prints a string to standard output
+fn print(input: string) {
+    let input_with_new_line = input + "\n";
+
+    let file_des = 1;
+    let buf: __i8ptr__ = input_with_new_line;
+    let size: i64 = strlen(input_with_new_line);
+
+    let result = write(file_des, buf, size);
+}
+
+fn eprintln(input: string) {
+    let input_with_new_line = input + "\n";
+
+    let file_des = 2;
+    let buf: __i8ptr__ = input_with_new_line;
+    let size: i64 = strlen(input_with_new_line);
+
+    let result = write(file_des, buf, size);
+}
+
+// A simple function to test if the standard library works
 fn assert_std_works(testing: string) {
-    print("Working (test string: %s)", testing);
+    print("Working (test string: " + testing + ")");
+}
+
+// Reads a line from standard input
+fn input() -> string {
+    let size: i64 = 1024;
+    let file_des = 0;
+    let buf: __i8ptr__ = malloc(size);
+
+    let size_read = read(file_des, buf, size);
+    let output: string = buf;
+
+    return output;
+}
+
+// Frees a string allocated in the standard library
+fn __string_destructor__(str: string) {
+    let converted_string: __i8ptr__ = str;
+    free(converted_string);
+}
+
+fn read_file_to_string(file_path: string) -> string {
+    let raw_file_path: __i8ptr__ = file_path;
+    let file_des = open(raw_file_path, 0, 0);
+    let current_allocated_size: i64 = 1024;
+    let buf: __i8ptr__ = malloc(current_allocated_size);
+
+    let should_continue = true;
+    while should_continue {
+        let size_read = read(file_des, buf, current_allocated_size);
+        let zero: i64 = 0;
+        if size_read == zero {
+            should_continue = false;
+        } else {
+            let two : i64 = 2;
+            let new_allocated_size: i64 = current_allocated_size * two;
+            buf = realloc(buf, new_allocated_size);
+            current_allocated_size = new_allocated_size;
+        }
+    }
+
+    let output: string = buf;
+    return output;
 }

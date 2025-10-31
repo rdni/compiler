@@ -4,7 +4,7 @@ macro_rules! MK_TOKEN {
         Token {
             kind: $kind,
             value: $value,
-            span: $span
+            span: $span,
         }
     };
 }
@@ -13,10 +13,17 @@ macro_rules! MK_TOKEN {
 macro_rules! MK_DEFAULT_HANDLER {
     ($kind:expr, $value:literal) => {
         |lexer: &mut Lexer, _regex: Regex| {
-            lexer.push(MK_TOKEN!($kind, String::from($value), Span {
-                start: Position(lexer.pos as u32, Rc::clone(&lexer.file)),
-                end: Position((lexer.pos + $value.len() as i32) as u32, Rc::clone(&lexer.file))
-            }));
+            lexer.push(MK_TOKEN!(
+                $kind,
+                String::from($value),
+                Span {
+                    start: Position(lexer.pos as u32, Rc::clone(&lexer.file)),
+                    end: Position(
+                        (lexer.pos + $value.len() as i32) as u32,
+                        Rc::clone(&lexer.file)
+                    )
+                }
+            ));
             lexer.advance_n($value.len().try_into().unwrap());
         }
     };

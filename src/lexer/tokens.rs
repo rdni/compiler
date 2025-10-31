@@ -1,5 +1,5 @@
-use std::{collections::HashMap, fmt::Display};
 use lazy_static::lazy_static;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::Span;
 
@@ -22,6 +22,7 @@ lazy_static! {
         map.insert("typeof", TokenKind::Typeof);
         map.insert("in", TokenKind::In);
         map.insert("struct", TokenKind::Struct);
+        map.insert("extern", TokenKind::Extern);
         map
     };
 }
@@ -33,6 +34,8 @@ pub enum TokenKind {
     String,
     Identifier,
 
+    Tilde,
+
     OpenBracket,
     CloseBracket,
     OpenCurly,
@@ -41,9 +44,9 @@ pub enum TokenKind {
     CloseParen,
 
     Assignment, // =
-    Equals, // ==
-    Not, // !
-    NotEquals, // !=
+    Equals,     // ==
+    Not,        // !
+    NotEquals,  // !=
 
     LessThan,
     Less,
@@ -56,6 +59,7 @@ pub enum TokenKind {
 
     Dot,
     // DotDot,
+    Ellipsis,
     Semicolon,
     Colon,
     Question,
@@ -88,10 +92,12 @@ pub enum TokenKind {
     Foreach,
     While,
     For,
+    Break,
     Export,
     Typeof,
     In,
-    Struct
+    Struct,
+    Extern,
 }
 
 impl Display for TokenKind {
@@ -104,7 +110,7 @@ impl Display for TokenKind {
 pub struct Token {
     pub kind: TokenKind,
     pub value: String,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Display for Token {
@@ -120,12 +126,16 @@ impl Token {
                 return true;
             }
         }
-        
+
         false
     }
 
     pub fn debug(&self) {
-        if self.is_one_of_many(vec![TokenKind::String, TokenKind::Identifier, TokenKind::Number]) {
+        if self.is_one_of_many(vec![
+            TokenKind::String,
+            TokenKind::Identifier,
+            TokenKind::Number,
+        ]) {
             println!("{} ({})", self.kind, self.value);
         } else {
             println!("{} ()", self.kind);

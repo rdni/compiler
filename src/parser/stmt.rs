@@ -1,14 +1,33 @@
-use crate::{ast::{ast::{Expr, StmtWrapper, TypeWrapper}, statements::{BlockStmt, ExpressionStmt, FnDeclStmt, IfStmt, ImportStmt, ReturnStmt, StructDeclStmt, VarDeclStmt}, types::{LiteralType, Literals}}, errors::errors::{Error, ErrorImpl}, lexer::tokens::TokenKind, parser::{expr::parse_expr, lookups::BindingPower}, Span};
+use crate::{
+    ast::{
+        ast::{Expr, StmtWrapper, TypeWrapper},
+        statements::{
+            BlockStmt, BreakStmt, DropStmt, ExpressionStmt, ExternDeclStmt, FnDeclStmt, IfStmt,
+            ImportStmt, ReturnStmt, StructDeclStmt, VarDeclStmt, WhileStmt,
+        },
+        types::{LiteralType, Literals},
+    },
+    errors::errors::{Error, ErrorImpl},
+    lexer::tokens::TokenKind,
+    parser::{expr::parse_expr, lookups::BindingPower},
+    Span,
+};
 
 use super::{parser::Parser, types::parse_type};
 
 pub fn parse_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
-    if parser.get_stmt_lookup().contains_key(&parser.current_token_kind()) {
-        return parser.get_stmt_lookup().get(&parser.current_token_kind()).unwrap()(parser);
+    if parser
+        .get_stmt_lookup()
+        .contains_key(&parser.current_token_kind())
+    {
+        return parser
+            .get_stmt_lookup()
+            .get(&parser.current_token_kind())
+            .unwrap()(parser);
     }
 
     let expr = parse_expr(parser, BindingPower::Default)?;
-    
+
     parser.expect(TokenKind::Semicolon)?;
 
     Ok(StmtWrapper::new(ExpressionStmt {
@@ -24,8 +43,16 @@ pub fn parse_var_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
     let start_token = parser.advance().clone();
     let is_constant = start_token.kind == TokenKind::Const;
 
-    let error = Error::new(ErrorImpl::UnexpectedTokenDetailed { token: parser.current_token().value.clone(), message: String::from("expected identifier during variable declaration") }, parser.get_position());
-    let variable_name = parser.expect_error(TokenKind::Identifier, Some(error))?.value;
+    let error = Error::new(
+        ErrorImpl::UnexpectedTokenDetailed {
+            token: parser.current_token().value.clone(),
+            message: String::from("expected identifier during variable declaration"),
+        },
+        parser.get_position(),
+    );
+    let variable_name = parser
+        .expect_error(TokenKind::Identifier, Some(error))?
+        .value;
 
     if parser.current_token_kind() == TokenKind::Colon {
         parser.advance();
@@ -38,10 +65,13 @@ pub fn parse_var_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
         parser.expect(TokenKind::Assignment)?;
         assigned_value = Some(parse_expr(parser, BindingPower::Default)?);
     } else if explicit_type.is_none() {
-        return Err(Error::new(ErrorImpl::UnexpectedTokenDetailed {
-            token: parser.current_token().value.clone(),
-            message: String::from("expected rhs or explicit type")
-        }, parser.get_position()));
+        return Err(Error::new(
+            ErrorImpl::UnexpectedTokenDetailed {
+                token: parser.current_token().value.clone(),
+                message: String::from("expected rhs or explicit type"),
+            },
+            parser.get_position(),
+        ));
     } else {
         assigned_value = None;
     }
@@ -49,18 +79,24 @@ pub fn parse_var_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
     parser.expect(TokenKind::Semicolon)?;
 
     if is_constant && assigned_value.is_none() {
-        return Err(Error::new(ErrorImpl::UnexpectedTokenDetailed { token: parser.current_token().value.clone(), message: String::from("expected rhs in constant definition") }, parser.get_position()));
+        return Err(Error::new(
+            ErrorImpl::UnexpectedTokenDetailed {
+                token: parser.current_token().value.clone(),
+                message: String::from("expected rhs in constant definition"),
+            },
+            parser.get_position(),
+        ));
     }
 
     Ok(StmtWrapper::new(VarDeclStmt {
         span: Span {
             start: start_token.span.start.clone(),
-            end: parser.get_position()
+            end: parser.get_position(),
         },
         is_constant,
         identifier: variable_name,
         assigned_value,
-        explicit_type
+        explicit_type,
     }))
 }
 
@@ -88,8 +124,8 @@ pub fn parse_import_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
         from,
         span: Span {
             start,
-            end: parser.get_position()
-        }
+            end: parser.get_position(),
+        },
     }))
 }
 
@@ -112,8 +148,8 @@ pub fn parse_if_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
         else_body,
         span: Span {
             start,
-            end: parser.get_position()
-        }
+            end: parser.get_position(),
+        },
     }))
 }
 
@@ -132,9 +168,63 @@ pub fn parse_block_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
         id: parser.advance_id(),
         span: Span {
             start,
-            end: parser.get_position()
-        }
+            end: parser.get_position(),
+        },
     }))
+}
+
+pub fn parse_extern_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
+    let start = parser.advance().span.start.clone();
+
+    let identifier = parser.expect(TokenKind::Identifier)?.value;
+
+    parser.expect(TokenKind::OpenParen)?;
+
+    let mut is_variadic = false;
+    let mut parameters = Vec::new();
+    while parser.current_token_kind() != TokenKind::CloseParen {
+        if parser.current_token_kind() == TokenKind::Ellipsis {
+            parser.advance();
+            is_variadic = true;
+
+            break;
+        }
+
+        let name = parser.expect(TokenKind::Identifier)?.value;
+        parser.expect(TokenKind::Colon)?;
+        let ty = parse_type(parser, BindingPower::Default)?;
+        parameters.push((name, ty));
+
+        if parser.current_token_kind() == TokenKind::Comma {
+            parser.advance();
+        }
+    }
+
+    parser.expect(TokenKind::CloseParen)?;
+
+    let return_type = if parser.current_token_kind() == TokenKind::Arrow {
+        parser.advance();
+        parse_type(parser, BindingPower::Default)?
+    } else {
+        TypeWrapper::new(LiteralType {
+            literal: Literals::Null,
+        })
+    };
+
+    parser.expect(TokenKind::Semicolon)?;
+
+    let value = StmtWrapper::new(ExternDeclStmt {
+        span: Span {
+            start,
+            end: parser.get_position(),
+        },
+        identifier,
+        parameters,
+        return_type,
+        is_variadic,
+    });
+
+    Ok(value)
 }
 
 pub fn parse_fn_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
@@ -162,7 +252,9 @@ pub fn parse_fn_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
         parser.advance();
         parse_type(parser, BindingPower::Default)?
     } else {
-        TypeWrapper::new(LiteralType { literal: Literals::Null })
+        TypeWrapper::new(LiteralType {
+            literal: Literals::Null,
+        })
     };
 
     let body = parse_block_stmt(parser)?;
@@ -170,14 +262,13 @@ pub fn parse_fn_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
     let value = StmtWrapper::new(FnDeclStmt {
         span: Span {
             start,
-            end: parser.get_position()
+            end: parser.get_position(),
         },
         identifier,
         parameters,
         return_type,
-        body: body.as_any().downcast_ref::<BlockStmt>().unwrap().clone()
+        body: body.as_any().downcast_ref::<BlockStmt>().unwrap().clone(),
     });
-    // println!("{:?}", value);
 
     Ok(value)
 }
@@ -197,8 +288,8 @@ pub fn parse_return_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
         value,
         span: Span {
             start,
-            end: parser.get_position()
-        }
+            end: parser.get_position(),
+        },
     }))
 }
 
@@ -228,7 +319,45 @@ pub fn parse_struct_decl_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error>
         fields: properties,
         span: Span {
             start,
-            end: parser.get_position()
-        }
+            end: parser.get_position(),
+        },
+    }))
+}
+
+pub fn parse_break_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
+    let start = parser.advance().span.start.clone();
+    parser.expect(TokenKind::Semicolon)?;
+    Ok(StmtWrapper::new(BreakStmt {
+        span: Span {
+            start,
+            end: parser.get_position(),
+        },
+    }))
+}
+
+pub fn parse_while_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
+    let start = parser.advance().span.start.clone();
+    let condition = parse_expr(parser, BindingPower::Default)?;
+    let body = parse_stmt(parser)?;
+    Ok(StmtWrapper::new(WhileStmt {
+        condition,
+        body,
+        span: Span {
+            start,
+            end: parser.get_position(),
+        },
+    }))
+}
+
+pub fn parse_drop_stmt(parser: &mut Parser) -> Result<StmtWrapper, Error> {
+    let start = parser.advance().span.start.clone();
+    let value = parse_expr(parser, BindingPower::Default)?;
+    parser.expect(TokenKind::Semicolon)?;
+    Ok(StmtWrapper::new(DropStmt {
+        span: Span {
+            start,
+            end: parser.get_position(),
+        },
+        expression: value,
     }))
 }

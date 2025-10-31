@@ -1,14 +1,21 @@
-use std::{any::Any, slice::{Iter, IterMut}};
+use std::{
+    any::Any,
+    slice::{Iter, IterMut},
+};
 
-use crate::{type_checker::typed_ast::{TypedStmt, TypedStmtWrapper}, Span};
+use crate::{
+    type_checker::typed_ast::{TypedStmt, TypedStmtWrapper},
+    Span,
+};
 
 use super::ast::{Expr, ExprWrapper, Stmt, StmtType, StmtWrapper, Type, TypeWrapper};
 
+/// A block statement containing a list of statements.
 #[derive(Debug, Clone)]
 pub struct BlockStmt {
     pub body: Vec<StmtWrapper>,
     pub id: i32,
-    pub span: Span
+    pub span: Span,
 }
 
 impl BlockStmt {
@@ -35,11 +42,12 @@ impl Stmt for BlockStmt {
     }
 }
 
-
+/// Expression statement
+/// A statement consisting of a single expression.
 #[derive(Debug)]
 pub struct ExpressionStmt {
     pub expression: ExprWrapper,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Stmt for ExpressionStmt {
@@ -57,14 +65,16 @@ impl Stmt for ExpressionStmt {
     }
 }
 
-
+/// Variable declaration statement
 #[derive(Debug)]
 pub struct VarDeclStmt {
     pub identifier: String,
     pub is_constant: bool,
     pub assigned_value: Option<ExprWrapper>,
+    /// The explicit type of the variable, if provided.
+    /// Changing this CAN affect code generation but mainly in the stdlib with internal types.
     pub explicit_type: Option<TypeWrapper>,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Stmt for VarDeclStmt {
@@ -75,26 +85,35 @@ impl Stmt for VarDeclStmt {
         self
     }
     fn clone_wrapper(&self) -> StmtWrapper {
-        StmtWrapper::new(
-            VarDeclStmt {
-                identifier: self.identifier.clone(),
-                is_constant: self.is_constant,
-                assigned_value: if self.assigned_value.is_none() { None } else { Some(self.assigned_value.as_ref().unwrap().clone_wrapper()) },
-                explicit_type: if self.explicit_type.is_none() { None } else { Some(self.explicit_type.as_ref().unwrap().clone_wrapper()) },
-                span: self.span.clone()
-            }
-        )
+        StmtWrapper::new(VarDeclStmt {
+            identifier: self.identifier.clone(),
+            is_constant: self.is_constant,
+            assigned_value: if self.assigned_value.is_none() {
+                None
+            } else {
+                Some(self.assigned_value.as_ref().unwrap().clone_wrapper())
+            },
+            explicit_type: if self.explicit_type.is_none() {
+                None
+            } else {
+                Some(self.explicit_type.as_ref().unwrap().clone_wrapper())
+            },
+            span: self.span.clone(),
+        })
     }
     fn get_span(&self) -> &Span {
         &self.span
     }
 }
 
+/// Import statement
+///
+/// Currently not implemented
 #[derive(Debug, Clone)]
 pub struct ImportStmt {
     pub identifier: String,
     pub from: Option<String>,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Stmt for ImportStmt {
@@ -118,12 +137,14 @@ impl TypedStmt for ImportStmt {
     }
 }
 
+/// If statement
+/// Contains a condition, a then body, and an optional else body.
 #[derive(Debug)]
 pub struct IfStmt {
     pub condition: ExprWrapper,
     pub then_body: StmtWrapper,
     pub else_body: Option<StmtWrapper>,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Stmt for IfStmt {
@@ -137,8 +158,12 @@ impl Stmt for IfStmt {
         StmtWrapper::new(IfStmt {
             condition: self.condition.clone_wrapper(),
             then_body: self.then_body.clone(),
-            else_body: if self.else_body.is_none() { None } else { Some(self.else_body.as_ref().unwrap().clone()) },
-            span: self.span.clone()
+            else_body: if self.else_body.is_none() {
+                None
+            } else {
+                Some(self.else_body.as_ref().unwrap().clone())
+            },
+            span: self.span.clone(),
         })
     }
     fn get_span(&self) -> &Span {
@@ -146,13 +171,51 @@ impl Stmt for IfStmt {
     }
 }
 
+/// External function declaration statement
+/// Only to be used in the stdlib for now - the __i64__ type is not stable yet.
+#[derive(Debug)]
+pub struct ExternDeclStmt {
+    pub identifier: String,
+    pub parameters: Vec<(String, TypeWrapper)>,
+    pub return_type: TypeWrapper,
+    pub is_variadic: bool,
+    pub span: Span,
+}
+
+impl Stmt for ExternDeclStmt {
+    fn get_stmt_type(&self) -> StmtType {
+        StmtType::ExternDeclStmt
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn clone_wrapper(&self) -> StmtWrapper {
+        StmtWrapper::new(ExternDeclStmt {
+            identifier: self.identifier.clone(),
+            parameters: self
+                .parameters
+                .iter()
+                .map(|(id, ty)| (id.clone(), ty.clone_wrapper()))
+                .collect(),
+            return_type: self.return_type.clone_wrapper(),
+            is_variadic: self.is_variadic,
+            span: self.span.clone(),
+        })
+    }
+    fn get_span(&self) -> &Span {
+        &self.span
+    }
+}
+
+/// Function declaration statement
+/// Contains the function name, parameters, return type, and body.
 #[derive(Debug)]
 pub struct FnDeclStmt {
     pub identifier: String,
     pub parameters: Vec<(String, TypeWrapper)>,
     pub return_type: TypeWrapper,
     pub body: BlockStmt,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Stmt for FnDeclStmt {
@@ -165,10 +228,14 @@ impl Stmt for FnDeclStmt {
     fn clone_wrapper(&self) -> StmtWrapper {
         StmtWrapper::new(FnDeclStmt {
             identifier: self.identifier.clone(),
-            parameters: self.parameters.iter().map(|(id, ty)| (id.clone(), ty.clone_wrapper())).collect(),
+            parameters: self
+                .parameters
+                .iter()
+                .map(|(id, ty)| (id.clone(), ty.clone_wrapper()))
+                .collect(),
             return_type: self.return_type.clone_wrapper(),
             body: self.body.clone(),
-            span: self.span.clone()
+            span: self.span.clone(),
         })
     }
     fn get_span(&self) -> &Span {
@@ -180,18 +247,23 @@ impl Clone for FnDeclStmt {
     fn clone(&self) -> Self {
         FnDeclStmt {
             identifier: self.identifier.clone(),
-            parameters: self.parameters.iter().map(|(id, ty)| (id.clone(), ty.clone_wrapper())).collect(),
+            parameters: self
+                .parameters
+                .iter()
+                .map(|(id, ty)| (id.clone(), ty.clone_wrapper()))
+                .collect(),
             return_type: self.return_type.clone_wrapper(),
             body: self.body.clone(),
-            span: self.span.clone()
+            span: self.span.clone(),
         }
     }
 }
 
+/// Return statement
 #[derive(Debug)]
 pub struct ReturnStmt {
     pub value: Option<ExprWrapper>,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Stmt for ReturnStmt {
@@ -203,8 +275,12 @@ impl Stmt for ReturnStmt {
     }
     fn clone_wrapper(&self) -> StmtWrapper {
         StmtWrapper::new(ReturnStmt {
-            value: if self.value.is_none() { None } else { Some(self.value.as_ref().unwrap().clone_wrapper()) },
-            span: self.span.clone()
+            value: if self.value.is_none() {
+                None
+            } else {
+                Some(self.value.as_ref().unwrap().clone_wrapper())
+            },
+            span: self.span.clone(),
         })
     }
     fn get_span(&self) -> &Span {
@@ -212,11 +288,12 @@ impl Stmt for ReturnStmt {
     }
 }
 
+/// Struct declaration statement
 #[derive(Debug)]
 pub struct StructDeclStmt {
     pub name: String,
     pub fields: Vec<(String, TypeWrapper)>,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Stmt for StructDeclStmt {
@@ -229,8 +306,86 @@ impl Stmt for StructDeclStmt {
     fn clone_wrapper(&self) -> StmtWrapper {
         StmtWrapper::new(StructDeclStmt {
             name: self.name.clone(),
-            fields: self.fields.iter().map(|(id, ty)| (id.clone(), ty.clone_wrapper())).collect(),
-            span: self.span.clone()
+            fields: self
+                .fields
+                .iter()
+                .map(|(id, ty)| (id.clone(), ty.clone_wrapper()))
+                .collect(),
+            span: self.span.clone(),
+        })
+    }
+    fn get_span(&self) -> &Span {
+        &self.span
+    }
+}
+
+/// Break statement
+/// Currently not implemented
+#[derive(Debug, Clone)]
+pub struct BreakStmt {
+    pub span: Span,
+}
+
+impl Stmt for BreakStmt {
+    fn get_stmt_type(&self) -> StmtType {
+        StmtType::BreakStmt
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn clone_wrapper(&self) -> StmtWrapper {
+        StmtWrapper::new(self.clone())
+    }
+    fn get_span(&self) -> &Span {
+        &self.span
+    }
+}
+
+/// While statement
+#[derive(Debug)]
+pub struct WhileStmt {
+    pub condition: ExprWrapper,
+    pub body: StmtWrapper,
+    pub span: Span,
+}
+
+impl Stmt for WhileStmt {
+    fn get_stmt_type(&self) -> StmtType {
+        StmtType::WhileStmt
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn clone_wrapper(&self) -> StmtWrapper {
+        StmtWrapper::new(WhileStmt {
+            condition: self.condition.clone_wrapper(),
+            body: self.body.clone(),
+            span: self.span.clone(),
+        })
+    }
+    fn get_span(&self) -> &Span {
+        &self.span
+    }
+}
+
+/// Drop statement
+#[derive(Debug)]
+pub struct DropStmt {
+    pub expression: ExprWrapper,
+    pub span: Span,
+}
+
+impl Stmt for DropStmt {
+    fn get_stmt_type(&self) -> StmtType {
+        StmtType::DropStmt
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn clone_wrapper(&self) -> StmtWrapper {
+        StmtWrapper::new(DropStmt {
+            expression: self.expression.clone_wrapper(),
+            span: self.span.clone(),
         })
     }
     fn get_span(&self) -> &Span {

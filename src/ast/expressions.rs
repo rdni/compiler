@@ -1,16 +1,28 @@
 use std::any::Any;
 
-use crate::{lexer::tokens::Token, type_checker::{type_checker::TypeChecker, typed_ast::{TypedExpr, TypedExprWrapper}}, Span};
+use crate::{
+    ast::types::NumberType,
+    lexer::tokens::Token,
+    type_checker::{
+        type_checker::TypeChecker,
+        typed_ast::{TypedExpr, TypedExprWrapper},
+    },
+    Span,
+};
 
-use super::{ast::{Expr, ExprType, ExprWrapper, Type, TypeWrapper}, types::{FunctionType, LiteralType, Literals}};
-
+use super::{
+    ast::{Expr, ExprType, ExprWrapper, Type, TypeWrapper},
+    types::{FunctionType, LiteralType, Literals},
+};
 
 // LITERALS
 
+/// Number Expression
+/// Represents a numeric literal in the AST.
 #[derive(Debug, Clone)]
 pub struct NumberExpr {
     pub value: f64,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Expr for NumberExpr {
@@ -21,7 +33,9 @@ impl Expr for NumberExpr {
         ExprType::Number
     }
     fn get_type(&self, _type_checker: &mut TypeChecker) -> TypeWrapper {
-        TypeWrapper::new(LiteralType { literal: Literals::Number })
+        TypeWrapper::new(LiteralType {
+            literal: Literals::Number(NumberType::Int32),
+        })
     }
     fn clone_wrapper(&self) -> ExprWrapper {
         ExprWrapper::new(self.clone())
@@ -33,20 +47,24 @@ impl Expr for NumberExpr {
 
 impl TypedExpr for NumberExpr {
     fn get_type(&self) -> TypeWrapper {
-        TypeWrapper::new(LiteralType { literal: Literals::Number })
+        TypeWrapper::new(LiteralType {
+            literal: Literals::Number(NumberType::Int32),
+        })
     }
     fn clone_typed_wrapper(&self) -> TypedExprWrapper {
         TypedExprWrapper::new(NumberExpr {
             value: self.value,
-            span: self.span.clone()
+            span: self.span.clone(),
         })
     }
 }
 
+/// String Expression
+/// Represents a string literal in the AST.
 #[derive(Debug, Clone)]
 pub struct StringExpr {
     pub value: String,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Expr for StringExpr {
@@ -57,7 +75,9 @@ impl Expr for StringExpr {
         ExprType::String
     }
     fn get_type(&self, _type_checker: &mut TypeChecker) -> TypeWrapper {
-        TypeWrapper::new(LiteralType { literal: Literals::Number })
+        TypeWrapper::new(LiteralType {
+            literal: Literals::String,
+        })
     }
     fn clone_wrapper(&self) -> ExprWrapper {
         ExprWrapper::new(self.clone())
@@ -69,20 +89,24 @@ impl Expr for StringExpr {
 
 impl TypedExpr for StringExpr {
     fn get_type(&self) -> TypeWrapper {
-        TypeWrapper::new(LiteralType { literal: Literals::String })
+        TypeWrapper::new(LiteralType {
+            literal: Literals::String,
+        })
     }
     fn clone_typed_wrapper(&self) -> TypedExprWrapper {
         TypedExprWrapper::new(StringExpr {
             value: self.value.clone(),
-            span: self.span.clone()
+            span: self.span.clone(),
         })
     }
 }
 
+/// Symbol Expression
+/// Represents an identifier in the AST. This includes functions.
 #[derive(Debug, Clone)]
 pub struct SymbolExpr {
     pub value: String,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Expr for SymbolExpr {
@@ -94,7 +118,11 @@ impl Expr for SymbolExpr {
     }
     fn get_type(&self, type_checker: &mut TypeChecker) -> TypeWrapper {
         // Fetch value from type_checker
-        type_checker.fetch_variable_type(self.value.clone(), self.span.start.clone()).expect("Variable not defined").1.clone_wrapper()
+        type_checker
+            .fetch_variable_type(self.value.clone(), self.span.start.clone())
+            .expect("Variable not defined")
+            .1
+            .clone_wrapper()
     }
     fn clone_wrapper(&self) -> ExprWrapper {
         ExprWrapper::new(self.clone())
@@ -106,12 +134,16 @@ impl Expr for SymbolExpr {
 
 // COMPLEX
 
+/// Binary Expression
+/// Represents a binary operation between two expressions in the AST.
+///
+/// This includes member expressions (`a.b`) as well as arithmetic operations (`a + b`).
 #[derive(Debug)]
 pub struct BinaryExpr {
     pub left: ExprWrapper,
     pub operator: Token,
     pub right: ExprWrapper,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Expr for BinaryExpr {
@@ -129,7 +161,7 @@ impl Expr for BinaryExpr {
             left: self.left.clone_wrapper(),
             operator: self.operator.clone(),
             right: self.right.clone_wrapper(),
-            span: self.span.clone()
+            span: self.span.clone(),
         })
     }
     fn get_span(&self) -> &crate::Span {
@@ -137,11 +169,13 @@ impl Expr for BinaryExpr {
     }
 }
 
+/// Prefix Expression
+/// Represents a prefix operation on an expression in the AST.
 #[derive(Debug)]
 pub struct PrefixExpr {
     pub operator: Token,
     pub right_expr: ExprWrapper,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Expr for PrefixExpr {
@@ -158,7 +192,7 @@ impl Expr for PrefixExpr {
         ExprWrapper::new(PrefixExpr {
             operator: self.operator.clone(),
             right_expr: self.right_expr.clone_wrapper(),
-            span: self.span.clone()
+            span: self.span.clone(),
         })
     }
     fn get_span(&self) -> &crate::Span {
@@ -166,12 +200,14 @@ impl Expr for PrefixExpr {
     }
 }
 
+/// Assignment Expression
+/// Represents an assignment operation in the AST.
 #[derive(Debug)]
 pub struct AssignmentExpr {
     pub assignee: ExprWrapper,
     pub operator: Token,
     pub value: ExprWrapper,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Expr for AssignmentExpr {
@@ -189,7 +225,7 @@ impl Expr for AssignmentExpr {
             assignee: self.assignee.clone_wrapper(),
             operator: self.operator.clone(),
             value: self.value.clone_wrapper(),
-            span: self.span.clone()
+            span: self.span.clone(),
         })
     }
     fn get_span(&self) -> &crate::Span {
@@ -197,11 +233,13 @@ impl Expr for AssignmentExpr {
     }
 }
 
+/// Call Expression
+/// Represents a function call in the AST.
 #[derive(Debug)]
 pub struct CallExpr {
     pub callee: ExprWrapper,
     pub arguments: Vec<ExprWrapper>,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Expr for CallExpr {
@@ -209,31 +247,41 @@ impl Expr for CallExpr {
         self
     }
     fn clone_wrapper(&self) -> ExprWrapper {
-        let cloned_args = self.arguments.iter().map(|x| x.clone_wrapper()).collect::<Vec<ExprWrapper>>();
-        
+        let cloned_args = self
+            .arguments
+            .iter()
+            .map(|x| x.clone_wrapper())
+            .collect::<Vec<ExprWrapper>>();
+
         ExprWrapper::new(CallExpr {
             callee: self.callee.clone_wrapper(),
             arguments: cloned_args,
-            span: self.span.clone()
+            span: self.span.clone(),
         })
     }
     fn get_expr_type(&self) -> ExprType {
         ExprType::CallExpr
     }
     fn get_type(&self, _type_checker: &mut TypeChecker) -> TypeWrapper {
-        println!("{:?}", self.callee);
-        self.callee.as_any().downcast_ref::<FunctionType>().expect("Expected a function when calling").return_type.clone_wrapper()
+        self.callee
+            .as_any()
+            .downcast_ref::<FunctionType>()
+            .expect("Expected a function when calling")
+            .return_type
+            .clone_wrapper()
     }
     fn get_span(&self) -> &crate::Span {
         &self.span
     }
 }
 
+/// Struct Initialization Expression
+/// Represents the initialization of a struct in the AST.
 #[derive(Debug)]
 pub struct StructInitExpr {
     pub name: String,
     pub fields: Vec<(String, ExprWrapper)>,
-    pub span: Span
+    pub span: Span,
 }
 
 impl Expr for StructInitExpr {
@@ -241,19 +289,27 @@ impl Expr for StructInitExpr {
         self
     }
     fn clone_wrapper(&self) -> ExprWrapper {
-        let cloned_fields = self.fields.iter().map(|(id, expr)| (id.clone(), expr.clone_wrapper())).collect::<Vec<(String, ExprWrapper)>>();
-        
+        let cloned_fields = self
+            .fields
+            .iter()
+            .map(|(id, expr)| (id.clone(), expr.clone_wrapper()))
+            .collect::<Vec<(String, ExprWrapper)>>();
+
         ExprWrapper::new(StructInitExpr {
             name: self.name.clone(),
             fields: cloned_fields,
-            span: self.span.clone()
+            span: self.span.clone(),
         })
     }
     fn get_expr_type(&self) -> ExprType {
         ExprType::StructInit
     }
     fn get_type(&self, type_checker: &mut TypeChecker) -> TypeWrapper {
-        type_checker.fetch_variable_type(self.name.clone(), self.span.start.clone()).expect("Variable not defined").1.clone_wrapper()
+        type_checker
+            .fetch_variable_type(self.name.clone(), self.span.start.clone())
+            .expect("Variable not defined")
+            .1
+            .clone_wrapper()
     }
     fn get_span(&self) -> &crate::Span {
         &self.span

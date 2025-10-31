@@ -1,4 +1,24 @@
-assert_std_works("working");
+print("Reading file 'example.txt':");
+let file_contents = read_file_to_string("example.txt");
+print(file_contents);
+~file_contents;
+
+print("Hello, World!");
+
+let test = 1;
+while test < 100 {
+    test = test + 1;
+    if test == 50 {
+        print("It's 50!");
+    }
+}
+
+print("Enter in something: ");
+
+let user_input = input();
+print("You entered " + user_input);
+
+~user_input;
 
 struct Question {
     question_text: string,
@@ -16,29 +36,67 @@ fn ask_question(question: Question) -> bool {
     print("C: " + question.option_3);
     print("D: " + question.option_4);
 
-    let user_input = string_input(64);
+    let user_input = input();
+    let is_correct = user_input == question.answer;
 
-    return user_input == question.answer;
+    ~user_input;
+
+    return is_correct;
 }
 
-let question = new Question {
+let question1 = new Question {
     question_text: "What is 1 + 1?",
     option_1: "4",
     option_2: "2",
     option_3: "13",
     option_4: "11",
-    answer: "B"
+    answer: "B\n"
+};
+let question2 = new Question {
+    question_text: "What is the capital of France?",
+    option_1: "Berlin",
+    option_2: "Madrid",
+    option_3: "Paris",
+    option_4: "London",
+    answer: "C\n"
+};
+let question3 = new Question {
+    question_text: "What is the capital of Germany?",
+    option_1: "Berlin",
+    option_2: "Madrid",
+    option_3: "Paris",
+    option_4: "London",
+    answer: "A\n"
 };
 
-if ask_question(question) {
+let score = 0;
+
+if ask_question(question1) {
     print("Correct!");
+    score = score + 1;
 } else {
     print("Incorrect!");
 }
 
+if ask_question(question2) {
+    print("Correct!");
+    score = score + 1;
+} else {
+    print("Incorrect!");
+}
+
+if ask_question(question3) {
+    print("Correct!");
+    score = score + 1;
+} else {
+    print("Incorrect!");
+}
+
+print("Your final score is " + itoa(score) + "/3!");
+
 struct Testing {
     field: string,
-    e: int
+    e: i32
 }
 
 let a = new Testing {
@@ -46,13 +104,17 @@ let a = new Testing {
     e: 5
 };
 
-print("%s %d", a.field, a.e);
+let converted_e1 = itoa(a.e);
+print(a.field + " " + converted_e1);
+~converted_e1;
 
 a.e = 10;
 a.field = a.field + "dfasdf";
 
-print("%s %d", a.field, a.e);
+let converted_e2 = itoa(a.e);
+print(a.field + " " + converted_e2);
+~converted_e2;
 
 a.field = ".\n.\x3F.\t.";
 
-print("%s", a.field);
+print(a.field);
