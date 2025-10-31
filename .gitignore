@@ -1,5 +1,3 @@
 /target
 /build
-test.c
-libtest.so
-.vscode/launch.json
+/.vscode
