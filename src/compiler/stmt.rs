@@ -450,8 +450,11 @@ pub fn gen_statement<'a>(compiler: &mut Compiler<'a>, statement: &TypedStmtWrapp
                     }
                 }
                 TypeType::Literal(Literals::String) => {
-                    let string_destructor_fn = compiler.module.get_function("__string_destructor__").unwrap();
-                    
+                    let string_destructor_fn = compiler
+                        .module
+                        .get_function("__string_destructor__")
+                        .unwrap();
+
                     compiler
                         .builder
                         .build_call(
@@ -465,11 +468,7 @@ pub fn gen_statement<'a>(compiler: &mut Compiler<'a>, statement: &TypedStmtWrapp
                     let free_fn = compiler.module.get_function("free").unwrap();
                     compiler
                         .builder
-                        .build_call(
-                            free_fn,
-                            &[value.into_pointer_value().into()],
-                            "",
-                        )
+                        .build_call(free_fn, &[value.into_pointer_value().into()], "")
                         .unwrap();
                 }
                 _ => {

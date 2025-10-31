@@ -39,7 +39,7 @@ impl Error {
             ErrorImpl::FunctionAlreadyDeclared { .. } => "FunctionAlreadyDeclared",
             ErrorImpl::UnknownType { .. } => "UnknownType",
             ErrorImpl::VariableAlreadyDropped { .. } => "VariableAlreadyDropped",
-            ErrorImpl::NotImplementedError { .. } => "NotImplementedError",
+            ErrorImpl::NotImplementedError => "NotImplementedError",
         }
     }
 

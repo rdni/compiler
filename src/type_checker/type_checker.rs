@@ -180,7 +180,7 @@ impl TypeChecker {
 
             if var.4 {
                 return Err(Error::new(
-                    ErrorImpl::VariableAlreadyDropped { variable: variable },
+                    ErrorImpl::VariableAlreadyDropped { variable },
                     position,
                 ));
             }
@@ -202,7 +202,7 @@ impl TypeChecker {
 
                     if var.4 {
                         return Err(Error::new(
-                            ErrorImpl::VariableAlreadyDropped { variable: variable },
+                            ErrorImpl::VariableAlreadyDropped { variable },
                             position,
                         ));
                     }
