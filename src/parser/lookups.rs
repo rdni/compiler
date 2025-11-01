@@ -1,3 +1,16 @@
+//! Lookup tables and handler registration for the parser.
+//!
+//! This module defines the type aliases for handler functions and
+//! initializes the lookup tables that map tokens to their parsing handlers.
+//! It includes:
+//!
+//! - Type definitions for NUD, LED, and statement handlers
+//! - Binding power (precedence) definitions
+//! - Registration functions that populate the parser's lookup tables
+//!
+//! These lookup tables enable the Pratt parser to dispatch to the
+//! appropriate parsing function based on the current token.
+
 use std::collections::HashMap;
 
 use crate::{
@@ -8,6 +21,10 @@ use crate::{
 
 use super::{expr::*, parser::Parser, stmt::*};
 
+/// Defines the binding power (precedence) levels for operators.
+///
+/// Lower values bind less tightly, higher values bind more tightly.
+/// Used in Pratt parsing to determine operator precedence.
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
 pub enum BindingPower {
     Default,
@@ -23,10 +40,29 @@ pub enum BindingPower {
     Primary,
 }
 
+/// Type alias for statement handler functions.
+///
+/// Statement handlers parse a complete statement and return a StmtWrapper.
 pub type StmtHandler = fn(&mut Parser) -> Result<StmtWrapper, Error>;
+
+/// Type alias for null denotation (prefix) handler functions.
+///
+/// NUD handlers parse prefix expressions (literals, identifiers, prefix operators).
 pub type NUDHandler = fn(&mut Parser) -> Result<ExprWrapper, Error>;
+
+/// Type alias for left denotation (infix) handler functions.
+///
+/// LED handlers parse infix expressions (binary operators, function calls, member access).
 pub type LEDHandler = fn(&mut Parser, ExprWrapper, BindingPower) -> Result<ExprWrapper, Error>;
 
+/// Initializes the expression and statement parsing lookup tables.
+///
+/// Registers all NUD, LED, and statement handlers with the parser
+/// for the various token types in the language.
+///
+/// # Arguments
+///
+/// * `parser` - Mutable reference to the parser to initialize
 pub fn create_token_lookups(parser: &mut Parser) {
     parser.led(
         TokenKind::Assignment,
