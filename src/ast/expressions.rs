@@ -1,3 +1,17 @@
+//! Expression AST node definitions.
+//!
+//! This module contains all expression types in the AST including:
+//!
+//! - Literals (numbers, strings, symbols)
+//! - Binary expressions (arithmetic, comparison, logical operations)
+//! - Prefix expressions (unary operations)
+//! - Function call expressions
+//! - Assignment expressions
+//! - Struct initialization expressions
+//!
+//! Each expression type implements the Expr trait and can be wrapped
+//! in an ExprWrapper for uniform handling.
+
 use std::any::Any;
 
 use crate::{

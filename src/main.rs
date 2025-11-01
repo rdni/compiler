@@ -1,3 +1,19 @@
+//! Compiler executable entry point.
+//!
+//! This is the main driver for the compiler. It orchestrates the compilation
+//! pipeline from source code to executable binary:
+//!
+//! 1. Sets up the build directory
+//! 2. Compiles the standard library
+//! 3. Lexes and parses the input source file
+//! 4. Type checks the AST
+//! 5. Generates LLVM IR
+//! 6. Links with the standard library
+//! 7. Compiles to object code with LLC
+//! 8. Links to executable with Clang
+//!
+//! Usage: compiler <source_file>
+
 use std::{
     env,
     fs::{self, create_dir, read_to_string},
@@ -156,6 +172,17 @@ fn main() {
     println!("Total time: {:?}", start.elapsed());
 }
 
+/// Pretty-prints debug output with indentation (unused utility function).
+///
+/// Formats strings with proper indentation for debugging purposes.
+///
+/// # Arguments
+///
+/// * `string` - The string to format
+///
+/// # Returns
+///
+/// A formatted string with proper indentation
 #[allow(dead_code)]
 fn pretty_print(string: String) -> String {
     let mut result = String::new();
@@ -199,6 +226,18 @@ fn pretty_print(string: String) -> String {
     result
 }
 
+/// Extracts function signatures from the compiled standard library.
+///
+/// Filters the stdlib for exported functions and converts them to
+/// type signatures that can be used during compilation of user code.
+///
+/// # Arguments
+///
+/// * `stdlib` - Reference to the compiled stdlib compiler instance
+///
+/// # Returns
+///
+/// A vector of tuples containing function names and their type signatures
 fn convert_stdlib_functions(stdlib: &Compiler<'_>) -> Vec<(String, TypeWrapper)> {
     let mut current_environment = stdlib.type_checker.environments[0].lock().unwrap();
 

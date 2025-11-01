@@ -1,3 +1,17 @@
+//! Typed Abstract Syntax Tree definitions.
+//!
+//! This module contains the typed variants of AST nodes produced by
+//! the type checker. Each typed node includes type information and
+//! has been validated for type correctness.
+//!
+//! The typed AST mirrors the structure of the untyped AST but includes:
+//! - Resolved types for all expressions
+//! - Validated function signatures
+//! - Verified variable references
+//! - Type-checked operations
+//!
+//! This typed AST is consumed by the code generator to produce LLVM IR.
+
 use std::any::Any;
 
 use crate::{
@@ -12,17 +26,27 @@ use crate::{
 
 use super::type_checker::TypeChecker;
 
+/// Trait for typed statement nodes.
+///
+/// Extends the Stmt trait with typed-specific functionality.
 pub trait TypedStmt: Stmt {
+    /// Clones this statement into a TypedStmtWrapper.
     fn clone_typed_wrapper(&self) -> TypedStmtWrapper;
 }
 
+/// Wrapper for typed statement nodes.
+///
+/// Provides a uniform interface for all typed statement types.
 #[derive(Debug)]
 pub struct TypedStmtWrapper(Box<dyn TypedStmt>);
 
 impl TypedStmtWrapper {
+    /// Creates a new TypedStmtWrapper around a typed statement.
     pub fn new<T: TypedStmt + 'static>(stmt: T) -> Self {
         TypedStmtWrapper(Box::new(stmt))
     }
+    
+    /// Consumes the wrapper and returns the inner typed statement.
     pub fn get_inner(self) -> Box<dyn TypedStmt> {
         self.0
     }

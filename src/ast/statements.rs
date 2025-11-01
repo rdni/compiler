@@ -1,3 +1,20 @@
+//! Statement AST node definitions.
+//!
+//! This module contains all statement types in the AST including:
+//!
+//! - Variable declarations (let, const)
+//! - Function declarations
+//! - Control flow statements (if, while, for)
+//! - Block statements
+//! - Expression statements
+//! - Return and break statements
+//! - Struct declarations
+//! - Import/export statements
+//! - Drop statements (for explicit memory management)
+//!
+//! Each statement type implements the Stmt trait and can be wrapped
+//! in a StmtWrapper for uniform handling.
+
 use std::{
     any::Any,
     slice::{Iter, IterMut},

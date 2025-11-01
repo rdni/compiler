@@ -1,10 +1,23 @@
+//! Core AST (Abstract Syntax Tree) definitions.
+//!
+//! This module contains the fundamental traits and types that make up
+//! the Abstract Syntax Tree structure. It defines:
+//!
+//! - Statement traits and wrapper types
+//! - Expression traits and wrapper types  
+//! - Type system traits and wrapper types
+//! - Common enums for categorizing AST nodes
+//!
+//! The AST uses trait objects and wrapper types to allow for heterogeneous
+//! collections of nodes while maintaining type safety through downcasting.
+
 use std::{any::Any, fmt::Debug, ops::Deref};
 
 use crate::type_checker::type_checker::TypeChecker;
 
 use super::{statements::ExpressionStmt, types::Literals};
 
-/// Statement Types
+/// Enumeration of all statement types in the AST.
 #[derive(PartialEq, Debug)]
 pub enum StmtType {
     ExpressionStmt,
