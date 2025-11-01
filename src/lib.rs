@@ -1,3 +1,17 @@
+//! Compiler library crate.
+//!
+//! This is the main library for a compiler that transforms source code
+//! into LLVM IR and eventually executable binaries. The compilation
+//! pipeline consists of:
+//!
+//! 1. Lexical analysis (tokenization)
+//! 2. Parsing (AST construction)
+//! 3. Type checking (semantic analysis)
+//! 4. Code generation (LLVM IR)
+//!
+//! The library provides modules for each stage along with error handling
+//! utilities and helper functions for displaying compilation errors.
+
 #![allow(clippy::module_inception)]
 
 use std::{fs, path::PathBuf, rc::Rc};
@@ -14,21 +28,47 @@ pub mod type_checker;
 
 extern crate regex;
 
+/// Represents a position in source code.
+///
+/// Contains the character offset and the file name.
 #[derive(Debug, Clone)]
 pub struct Position(pub u32, pub Rc<String>);
 
 impl Position {
+    /// Creates a null position for synthetic nodes.
     pub fn null() -> Self {
         Position(0, Rc::new(String::from("<null>")))
     }
 }
 
+/// Represents a span (range) in source code.
+///
+/// Contains start and end positions to identify a region of source code.
 #[derive(Debug, Clone)]
 pub struct Span {
+    /// The starting position of this span
     pub start: Position,
+    /// The ending position of this span
     pub end: Position,
 }
 
+/// Retrieves the line of text at a given position in a file.
+///
+/// # Arguments
+///
+/// * `file` - Path to the source file
+/// * `position` - Character offset in the file
+///
+/// # Returns
+///
+/// A tuple containing:
+/// - Line number (1-indexed)
+/// - The line text
+/// - Position within the line (0-indexed)
+///
+/// # Panics
+///
+/// Panics if the position exceeds the file length or the line cannot be found.
 pub fn get_line_at_position(file: PathBuf, position: u32) -> (usize, String, usize) {
     let content = fs::read_to_string(&file).unwrap();
     let pos = position as usize;
@@ -73,6 +113,15 @@ mod tests {
     }
 }
 
+/// Displays a formatted compilation error to stdout.
+///
+/// Shows the error message, file location, line number, source line,
+/// and a pointer to the error position.
+///
+/// # Arguments
+///
+/// * `error` - The error to display
+/// * `file` - Path to the source file
 pub fn display_error(error: Error, file: PathBuf) {
     /*
         error: message
@@ -104,6 +153,17 @@ pub fn display_error(error: Error, file: PathBuf) {
     println!("{:>padding$} {:->arrows$}", "|", "^");
 }
 
+/// Helper function to remove leading whitespace from a string.
+///
+/// # Arguments
+///
+/// * `string` - The string to process
+///
+/// # Returns
+///
+/// A tuple containing:
+/// - The string with leading whitespace removed
+/// - The number of whitespace characters removed
 fn remove_starting_whitespace(string: &str) -> (String, usize) {
     let mut start = 0;
     for c in string.chars() {

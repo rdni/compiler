@@ -1,9 +1,24 @@
+//! Token definitions and types for the lexer.
+//!
+//! This module defines the token types used throughout the compilation process.
+//! It includes:
+//!
+//! - `TokenKind` enum defining all possible token types
+//! - `Token` struct holding token kind, value, and source position
+//! - `RESERVED_LOOKUP` mapping reserved keywords to their token kinds
+//!
+//! Tokens represent the atomic units of the source code after lexical analysis.
+
 use lazy_static::lazy_static;
 use std::{collections::HashMap, fmt::Display};
 
 use crate::Span;
 
 lazy_static! {
+    /// Lookup table for reserved keywords.
+    ///
+    /// Maps keyword strings to their corresponding TokenKind variants.
+    /// Used by the lexer to distinguish keywords from regular identifiers.
     pub static ref RESERVED_LOOKUP: HashMap<&'static str, TokenKind> = {
         let mut map = HashMap::new();
         map.insert("let", TokenKind::Let);
@@ -27,6 +42,10 @@ lazy_static! {
     };
 }
 
+/// Represents the different kinds of tokens in the language.
+///
+/// This enum defines all possible token types including literals,
+/// operators, keywords, and punctuation.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum TokenKind {
     EOF,
@@ -106,10 +125,17 @@ impl Display for TokenKind {
     }
 }
 
+/// Represents a token with its kind, value, and source location.
+///
+/// Tokens are produced by the lexer and consumed by the parser.
+/// Each token includes position information for error reporting.
 #[derive(Debug, Clone)]
 pub struct Token {
+    /// The type of token
     pub kind: TokenKind,
+    /// The string value of the token
     pub value: String,
+    /// The source code span where this token appears
     pub span: Span,
 }
 
@@ -120,6 +146,15 @@ impl Display for Token {
 }
 
 impl Token {
+    /// Checks if the token is one of the specified kinds.
+    ///
+    /// # Arguments
+    ///
+    /// * `tokens` - Vector of TokenKind variants to check against
+    ///
+    /// # Returns
+    ///
+    /// Returns true if the token matches any of the provided kinds.
     fn is_one_of_many(&self, tokens: Vec<TokenKind>) -> bool {
         for token in tokens {
             if token == self.kind {
@@ -130,6 +165,9 @@ impl Token {
         false
     }
 
+    /// Prints debug information about this token.
+    ///
+    /// Displays the token kind and value (for string, identifier, and number tokens).
     pub fn debug(&self) {
         if self.is_one_of_many(vec![
             TokenKind::String,

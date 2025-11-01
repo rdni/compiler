@@ -1,3 +1,19 @@
+//! Type checker implementation.
+//!
+//! This module contains the core type checking logic that validates
+//! and transforms the AST. It handles:
+//!
+//! - Type inference and validation for expressions
+//! - Variable and function scope management
+//! - Type compatibility checking
+//! - Function signature validation
+//! - Struct type checking
+//! - Memory lifetime tracking (variable drops)
+//!
+//! The type checker uses Environment structures to track variable
+//! declarations and types across different scopes, and produces a
+//! typed AST that can be safely compiled to LLVM IR.
+
 use std::{
     collections::{hash_map::Entry, HashMap},
     rc::Rc,
@@ -33,11 +49,19 @@ use super::typed_ast::{
     TypedSymbolExpr, TypedVarDeclStmt,
 };
 
+/// Represents a lexical scope environment for type checking.
+///
+/// Tracks variable and type declarations within a scope, along with
+/// metadata for semantic analysis like variable lifetimes and const-ness.
 #[derive(Debug)]
 pub struct Environment {
-    pub variable_lookup: HashMap<String, (bool, TypeWrapper, Position, Position, bool)>, // (is_constant, type, declaration position, last access, has been dropped)
-    pub type_lookup: HashMap<String, TypeWrapper>, // User defined types
+    /// Maps variable names to (is_const, type, decl_pos, last_access, is_dropped)
+    pub variable_lookup: HashMap<String, (bool, TypeWrapper, Position, Position, bool)>,
+    /// Maps user-defined type names to their type definitions
+    pub type_lookup: HashMap<String, TypeWrapper>,
+    /// Unique identifier for this environment
     pub id: i32,
+    /// The function this environment belongs to (if any)
     pub function: Option<FnDeclStmt>,
 }
 
@@ -45,6 +69,11 @@ unsafe impl Send for Environment {}
 unsafe impl Sync for Environment {}
 
 impl Environment {
+    /// Creates a new environment with the given ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - Unique identifier for this environment
     pub fn new(id: i32) -> Self {
         Environment {
             variable_lookup: HashMap::new(),

@@ -1,3 +1,16 @@
+//! Type parsing implementation.
+//!
+//! This module handles parsing of type annotations and type expressions.
+//! It supports:
+//!
+//! - Basic types (identifiers)
+//! - Array types
+//! - Function types
+//! - Struct types
+//!
+//! Similar to expression parsing, it uses NUD/LED handlers with
+//! binding powers for parsing complex type expressions.
+
 use std::collections::HashMap;
 
 use crate::{
@@ -11,14 +24,28 @@ use crate::{
 
 use super::{lookups::BindingPower, parser::Parser};
 
+/// Type alias for type null denotation handler functions.
 pub type TypeNUDHandler = fn(&mut Parser) -> Result<TypeWrapper, Error>;
+
+/// Type alias for type left denotation handler functions.
 pub type TypeLEDHandler = fn(&mut Parser, TypeWrapper, BindingPower) -> Result<TypeWrapper, Error>;
 
-// Lookup tables inside parser struct, so it's easier
+/// Type alias for type NUD lookup table.
 pub type TypeNUDLookup = HashMap<TokenKind, TypeNUDHandler>;
+
+/// Type alias for type LED lookup table.
 pub type TypeLEDLookup = HashMap<TokenKind, TypeLEDHandler>;
+
+/// Type alias for type binding power lookup table.
 pub type TypeBPLookup = HashMap<TokenKind, BindingPower>;
 
+/// Initializes the type parsing lookup tables.
+///
+/// Registers NUD and LED handlers for parsing type expressions.
+///
+/// # Arguments
+///
+/// * `parser` - Mutable reference to the parser to initialize
 pub fn create_token_type_lookups(parser: &mut Parser) {
     parser.type_nud(TokenKind::Identifier, parse_symbol_type);
     parser.type_led(TokenKind::OpenBracket, BindingPower::Call, parse_array_type);

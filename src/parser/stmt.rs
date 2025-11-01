@@ -1,3 +1,17 @@
+//! Statement parsing implementation.
+//!
+//! This module contains functions for parsing various statement types:
+//!
+//! - Variable declarations (let, const)
+//! - Function declarations
+//! - Control flow (if, while, for)
+//! - Struct declarations
+//! - Import/export statements
+//! - Return, break, and expression statements
+//!
+//! Each statement type has dedicated parsing logic that handles the
+//! specific syntax and creates the appropriate AST nodes.
+
 use crate::{
     ast::{
         ast::{Expr, StmtWrapper, TypeWrapper},

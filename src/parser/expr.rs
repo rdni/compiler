@@ -1,3 +1,17 @@
+//! Expression parsing implementation.
+//!
+//! This module handles parsing of all expression types using a Pratt parser
+//! approach. It includes handlers for:
+//!
+//! - Literals (numbers, strings, symbols)
+//! - Binary operations (arithmetic, comparison, logical)
+//! - Prefix operations (unary minus, not)
+//! - Function calls and struct initialization
+//! - Assignments and member access
+//!
+//! The Pratt parser uses NUD (null denotation) and LED (left denotation)
+//! functions with binding powers to handle operator precedence correctly.
+
 use crate::{
     ast::{
         ast::{Expr, ExprWrapper},

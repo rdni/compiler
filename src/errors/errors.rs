@@ -1,16 +1,41 @@
+//! Error type implementations.
+//!
+//! This module contains the Error and ErrorImpl types that represent
+//! compilation errors with source position information. It provides:
+//!
+//! - Error construction and accessors
+//! - Error categorization by type
+//! - Helpful error messages and tips
+//! - Display formatting for user-friendly error output
+//!
+//! Errors are used throughout the compilation pipeline (lexing, parsing,
+//! type checking, code generation) to report issues to the user.
+
 use std::fmt::Display;
 
 use thiserror::Error;
 
 use crate::Position;
 
+/// Represents a compilation error with position information.
+///
+/// Contains the specific error variant and the position in the source
+/// where the error occurred.
 #[derive(Debug, Clone)]
 pub struct Error {
+    /// The specific error variant
     internal_error: ErrorImpl,
+    /// The position in source where the error occurred
     position: Position,
 }
 
 impl Error {
+    /// Creates a new Error with the given error type and position.
+    ///
+    /// # Arguments
+    ///
+    /// * `error_impl` - The specific error variant
+    /// * `position` - The source position where the error occurred
     pub fn new(error_impl: ErrorImpl, position: Position) -> Self {
         Error {
             internal_error: error_impl,
@@ -18,10 +43,12 @@ impl Error {
         }
     }
 
+    /// Returns the source position where this error occurred.
     pub fn get_position(&self) -> &Position {
         &self.position
     }
 
+    /// Returns a string name for this error type.
     pub fn get_error_name(&self) -> &str {
         match &self.internal_error {
             ErrorImpl::UnrecognisedToken { .. } => "UnrecognisedToken",
@@ -43,6 +70,9 @@ impl Error {
         }
     }
 
+    /// Returns a helpful tip or suggestion for this error.
+    ///
+    /// Provides context-specific advice to help the user fix the error.
     pub fn get_tip(&self) -> ErrorTip {
         match &self.internal_error {
             ErrorImpl::UnrecognisedToken { .. } => ErrorTip::None,

@@ -1,3 +1,19 @@
+//! Lexer implementation for tokenizing source code.
+//!
+//! This module contains the main Lexer struct and associated functions
+//! for converting source code into tokens. It uses regex patterns to match
+//! different token types including:
+//!
+//! - Keywords (let, const, fn, etc.)
+//! - Identifiers and symbols
+//! - Numeric literals (integers and floats)
+//! - String literals (with escape sequence support)
+//! - Operators and punctuation
+//! - Comments (skipped during tokenization)
+//!
+//! The lexer maintains position information for each token to support
+//! accurate error reporting in later compilation stages.
+
 use std::rc::Rc;
 
 use regex::Regex;
@@ -9,6 +25,9 @@ use crate::{
 
 use super::tokens::{Token, TokenKind, RESERVED_LOOKUP};
 
+/// Type alias for regex pattern handler functions.
+///
+/// Handler functions process matched regex patterns and create tokens.
 pub type RegexHandler = fn(&mut Lexer, Regex);
 
 /// Represents a regex pattern and its associated handler.

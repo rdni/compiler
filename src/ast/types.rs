@@ -1,3 +1,15 @@
+//! Type system definitions for the AST.
+//!
+//! This module defines the type system used in the language, including:
+//!
+//! - Primitive types (numbers, strings, booleans)
+//! - Composite types (arrays, structs, functions)
+//! - Type wrappers and conversions
+//! - Literal type representations
+//!
+//! Types in the AST are used during parsing to represent type annotations,
+//! and are then refined by the type checker into concrete types.
+
 use core::panic;
 use std::{any::Any, rc::Rc};
 
@@ -5,7 +17,7 @@ use crate::{type_checker::typed_ast::TypedBlockStmt, Position};
 
 use super::ast::{Type, TypeType, TypeWrapper};
 
-/// Represents the different literal types in the language
+/// Represents the different literal types in the language.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Literals {
     String,
@@ -15,6 +27,7 @@ pub enum Literals {
     InternalI8Pointer,
 }
 
+/// Represents numeric types with different precisions.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum NumberType {
     Int32,
@@ -23,8 +36,10 @@ pub enum NumberType {
     Int16,
 }
 
-/// Represents an internal type, that needs to be converted into a real type during type checking
-/// This includes `string`, `number`, etc.
+/// Represents a symbolic type reference that needs resolution.
+///
+/// During parsing, type references are stored as symbols and later
+/// resolved to concrete types during type checking.
 #[derive(Debug, Clone)]
 pub struct SymbolType {
     pub name: String,
