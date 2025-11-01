@@ -1,3 +1,9 @@
+//! Standard library compilation module.
+//!
+//! This module handles the compilation of the standard library code,
+//! which is written in the source language and compiled to LLVM IR.
+//! The stdlib provides core functionality like memory management functions.
+
 use std::{fs, path::PathBuf, rc::Rc};
 
 use inkwell::{context::Context, module::Linkage, AddressSpace};
@@ -15,6 +21,28 @@ use crate::{
 
 use super::{compiler::Compiler, stmt::gen_statement};
 
+/// Compiles the standard library from source code.
+///
+/// This function takes the main stdlib source file, tokenizes, parses,
+/// type-checks, and compiles it into LLVM IR. The stdlib is compiled
+/// separately from user code to provide core functionality.
+///
+/// # Arguments
+///
+/// * `main_stdlib_file` - Path to the main stdlib source file
+/// * `output_file` - Path where the compiled stdlib IR should be saved
+/// * `context` - LLVM context for code generation
+///
+/// # Returns
+///
+/// Returns a Compiler instance containing the compiled stdlib module.
+///
+/// # Panics
+///
+/// Panics if:
+/// - The stdlib file cannot be read
+/// - Parsing fails
+/// - Type checking fails
 pub fn compile_stdlib(
     main_stdlib_file: PathBuf,
     output_file: PathBuf,
@@ -69,6 +97,15 @@ pub fn compile_stdlib(
     compiler
 }
 
+/// Compiles the standard library AST into LLVM IR.
+///
+/// Iterates through all statements in the stdlib AST and generates
+/// LLVM IR code for each one.
+///
+/// # Arguments
+///
+/// * `compiler` - Mutable reference to the compiler instance
+/// * `output_file` - Path where the compiled module will be saved
 fn compile_stdlib_ast(compiler: &mut Compiler, output_file: PathBuf) {
     let statements = compiler
         .ast
@@ -83,6 +120,15 @@ fn compile_stdlib_ast(compiler: &mut Compiler, output_file: PathBuf) {
     compiler.save_module_to_file(output_file);
 }
 
+/// Declares external C functions needed by the stdlib.
+///
+/// This includes functions like `abort`, `panic`, `strcat`, and `strcmp`
+/// that are either provided by the C standard library or implemented
+/// elsewhere in the runtime.
+///
+/// # Arguments
+///
+/// * `compiler` - Mutable reference to the compiler instance
 fn declare_external_functions(compiler: &mut Compiler) {
     let i8_ptr_type = compiler.context.i8_type().ptr_type(AddressSpace::default());
 

@@ -1,3 +1,9 @@
+//! Statement code generation module.
+//!
+//! This module is responsible for generating LLVM IR for various statement types
+//! in the language, including variable declarations, function definitions, control
+//! flow statements (if, while), and struct declarations.
+
 use inkwell::{
     module::Linkage,
     types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum},
@@ -18,6 +24,27 @@ use crate::{
 
 use super::{compiler::Compiler, expr::gen_expression};
 
+/// Generates LLVM IR for a given statement.
+///
+/// This function handles all statement types including:
+/// - Expression statements
+/// - Variable declarations
+/// - If/else conditionals
+/// - Function declarations
+/// - External function declarations
+/// - Return statements
+/// - Struct declarations (with automatic destructor generation)
+/// - While loops
+/// - Drop statements (for resource cleanup and destructor calls)
+///
+/// # Arguments
+///
+/// * `compiler` - Mutable reference to the compiler instance
+/// * `statement` - The typed statement wrapper to compile
+///
+/// # Panics
+///
+/// Panics if an unhandled statement type is encountered.
 pub fn gen_statement<'a>(compiler: &mut Compiler<'a>, statement: &TypedStmtWrapper) {
     match statement.get_stmt_type() {
         StmtType::ExpressionStmt => {
