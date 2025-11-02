@@ -83,7 +83,7 @@ impl Lexer {
                     handler: skip_handler,
                 },
                 RegexPattern {
-                    regex: Regex::new("\"[^\"]*\"").unwrap(),
+                    regex: Regex::new(r#""([^"\\]|\\.)*""#).unwrap(),
                     handler: string_handler,
                 },
                 RegexPattern {
