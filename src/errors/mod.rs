@@ -9,3 +9,6 @@
 //! - Helpful error messages and suggestions
 
 pub mod errors;
+
+#[cfg(test)]
+mod tests;

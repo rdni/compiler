@@ -97,6 +97,8 @@ pub fn get_line_at_position(file: PathBuf, position: u32) -> (usize, String, usi
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_get_line_at_position() {
         let (line_number, line, line_pos) =
@@ -110,6 +112,60 @@ mod tests {
         assert_eq!(line_number, 4);
         assert_eq!(line, "Testing { }\n");
         assert_eq!(line_pos, 8);
+    }
+
+    #[test]
+    fn test_remove_starting_whitespace() {
+        let (result, count) = remove_starting_whitespace("    hello");
+        assert_eq!(result, "hello");
+        assert_eq!(count, 4);
+    }
+
+    #[test]
+    fn test_remove_starting_whitespace_no_leading_space() {
+        let (result, count) = remove_starting_whitespace("hello");
+        assert_eq!(result, "hello");
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_remove_starting_whitespace_only_spaces() {
+        let (result, count) = remove_starting_whitespace("    ");
+        assert_eq!(result, "");
+        assert_eq!(count, 4);
+    }
+
+    #[test]
+    fn test_remove_starting_whitespace_mixed() {
+        let (result, count) = remove_starting_whitespace("  hello world");
+        assert_eq!(result, "hello world");
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_position_creation() {
+        let pos = Position(42, Rc::new("test.lang".to_string()));
+        assert_eq!(pos.0, 42);
+    }
+
+    #[test]
+    fn test_position_null() {
+        let pos = Position::null();
+        assert_eq!(pos.0, 0);
+        assert_eq!(*pos.1, "<null>");
+    }
+
+    #[test]
+    fn test_span_creation() {
+        let start = Position(10, Rc::new("test.lang".to_string()));
+        let end = Position(20, Rc::new("test.lang".to_string()));
+        let span = Span {
+            start: start.clone(),
+            end: end.clone(),
+        };
+        
+        assert_eq!(span.start.0, 10);
+        assert_eq!(span.end.0, 20);
     }
 }
 
