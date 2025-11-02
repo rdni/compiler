@@ -7,6 +7,12 @@ extern realloc(ptr: __i8ptr__, size: i64) -> __i8ptr__;
 extern sprintf(dest: __i8ptr__, format: __i8ptr__, ...) -> i32;
 extern open(path: __i8ptr__, flags: i32, mode: i32) -> i32;
 
+// Frees a string allocated in the standard library
+fn __string_destructor__(str: string) {
+    let converted_string: __i8ptr__ = str;
+    free(converted_string);
+}
+
 // Converts an integer to a string
 fn itoa(value: i32) -> string {
     let malloc_size: i64 = 32;
@@ -42,7 +48,9 @@ fn eprintln(input: string) {
 
 // A simple function to test if the standard library works
 fn assert_std_works(testing: string) {
-    print("Working (test string: " + testing + ")");
+    let concatenated = "Working (test string: " + testing + ")";
+    print(concatenated);
+    ~concatenated;
 }
 
 // Reads a line from standard input
@@ -55,12 +63,6 @@ fn input() -> string {
     let output: string = buf;
 
     return output;
-}
-
-// Frees a string allocated in the standard library
-fn __string_destructor__(str: string) {
-    let converted_string: __i8ptr__ = str;
-    free(converted_string);
 }
 
 fn read_file_to_string(file_path: string) -> string {
