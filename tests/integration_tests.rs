@@ -1,9 +1,17 @@
 //! Integration tests for end-to-end compilation.
 //!
 //! These tests verify that the complete compilation pipeline works correctly
-//! from source code to parsed and type-checked AST.
+//! from source code through tokenization, parsing, type checking, and LLVM IR generation.
 
-use compiler::{lexer::lexer::tokenize, parser::parser::parse, type_checker::type_checker::type_check};
+use compiler::{
+    ast::ast::Stmt,
+    compiler::compiler::compile,
+    lexer::lexer::tokenize,
+    parser::parser::parse,
+    type_checker::{type_checker::type_check, typed_ast::TypedBlockStmt},
+};
+use inkwell::context::Context;
+use std::path::PathBuf;
 
 #[test]
 fn test_compile_simple_program() {
@@ -15,6 +23,24 @@ fn test_compile_simple_program() {
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
+    
+    // Compile to LLVM IR
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_simple.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -23,6 +49,27 @@ fn test_compile_function() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_function.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -31,6 +78,27 @@ fn test_compile_struct() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_struct.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -46,6 +114,27 @@ fn test_compile_control_flow() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_control_flow.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -59,6 +148,27 @@ fn test_compile_while_loop() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_while_loop.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -75,6 +185,27 @@ fn test_compile_struct_with_methods() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_struct_methods.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -83,6 +214,27 @@ fn test_compile_nested_expressions() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_nested_expr.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -91,6 +243,27 @@ fn test_compile_string_concatenation() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_string_concat.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -103,6 +276,27 @@ fn test_compile_member_access() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_member_access.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -121,6 +315,27 @@ fn test_compile_multiple_functions() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_multiple_functions.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -156,6 +371,27 @@ fn test_compile_assignment_operators() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_assignment_ops.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -164,6 +400,27 @@ fn test_compile_empty_source() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_empty.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }
 
 #[test]
@@ -176,4 +433,25 @@ fn test_compile_comments() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
+    
+    let ast = ast.unwrap();
+    let (type_checker, error) = type_check(ast, None, false);
+    assert!(error.is_none(), "Type checking should succeed");
+    
+    let context = Context::create();
+    let typed_ast = type_checker.typed_ast[0]
+        .as_any()
+        .downcast_ref::<TypedBlockStmt>()
+        .unwrap()
+        .clone();
+    
+    let result = compile(
+        typed_ast,
+        type_checker,
+        vec![],
+        PathBuf::from("/tmp/compiler_tests/test_comments.ll"),
+        "test.lang",
+        &context,
+    );
+    assert!(result.is_ok(), "Compilation should succeed");
 }

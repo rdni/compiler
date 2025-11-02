@@ -162,7 +162,7 @@ fn test_tokenize_compound_operators() {
 
 #[test]
 fn test_tokenize_comments() {
-    let source = "let x = 5 // this is a comment\nlet y = 10".to_string();
+    let source = "let x = 5; // this is a comment\nlet y = 10;".to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     
     // Comments should be skipped
@@ -172,13 +172,15 @@ fn test_tokenize_comments() {
     assert_eq!(tokens[2].kind, TokenKind::Assignment);
     assert_eq!(tokens[3].kind, TokenKind::Number);
     assert_eq!(tokens[3].value, "5");
-    assert_eq!(tokens[4].kind, TokenKind::Let);
-    assert_eq!(tokens[5].kind, TokenKind::Identifier);
-    assert_eq!(tokens[5].value, "y");
-    assert_eq!(tokens[6].kind, TokenKind::Assignment);
-    assert_eq!(tokens[7].kind, TokenKind::Number);
-    assert_eq!(tokens[7].value, "10");
-    assert_eq!(tokens[8].kind, TokenKind::EOF);
+    assert_eq!(tokens[4].kind, TokenKind::Semicolon);
+    assert_eq!(tokens[5].kind, TokenKind::Let);
+    assert_eq!(tokens[6].kind, TokenKind::Identifier);
+    assert_eq!(tokens[6].value, "y");
+    assert_eq!(tokens[7].kind, TokenKind::Assignment);
+    assert_eq!(tokens[8].kind, TokenKind::Number);
+    assert_eq!(tokens[8].value, "10");
+    assert_eq!(tokens[9].kind, TokenKind::Semicolon);
+    assert_eq!(tokens[10].kind, TokenKind::EOF);
 }
 
 #[test]
@@ -247,7 +249,7 @@ fn test_tokenize_whitespace_handling() {
 
 #[test]
 fn test_tokenize_newlines() {
-    let source = "let x = 1\nlet y = 2\n".to_string();
+    let source = "let x = 1;\nlet y = 2;\n".to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     
     assert_eq!(tokens[0].kind, TokenKind::Let);
@@ -256,9 +258,10 @@ fn test_tokenize_newlines() {
     assert_eq!(tokens[2].kind, TokenKind::Assignment);
     assert_eq!(tokens[3].kind, TokenKind::Number);
     assert_eq!(tokens[3].value, "1");
-    assert_eq!(tokens[4].kind, TokenKind::Let);
-    assert_eq!(tokens[5].kind, TokenKind::Identifier);
-    assert_eq!(tokens[5].value, "y");
+    assert_eq!(tokens[4].kind, TokenKind::Semicolon);
+    assert_eq!(tokens[5].kind, TokenKind::Let);
+    assert_eq!(tokens[6].kind, TokenKind::Identifier);
+    assert_eq!(tokens[6].value, "y");
 }
 
 #[test]
