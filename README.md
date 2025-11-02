@@ -6,3 +6,22 @@ This uses LLVM to implement a programming language compiler, with syntax that is
 Once importing is implemented, the standard library will be completed, but for now everything is done using Rust code to generate the IR for the main functions.
 
 There's some error handling, but it doesn't cover every case yet.
+
+## Testing
+
+The project includes a comprehensive test suite with **86 tests** covering:
+- Lexer (tokenization)
+- Parser (AST construction)
+- Error handling
+- Utility functions
+- End-to-end integration tests
+
+See [TESTING.md](TESTING.md) for detailed documentation.
+
+### Running Tests
+
+```bash
+export LLVM_SYS_140_PREFIX=/usr/lib/llvm-14
+cargo test
+```
+
