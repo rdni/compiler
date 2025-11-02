@@ -122,26 +122,26 @@ impl<'a> Compiler<'a> {
 
         let fpm = PassManager::create(());
 
-        // fpm.add_instruction_combining_pass();
-        // fpm.add_reassociate_pass(); // Reorder expressions to enable better optimizations
-        // fpm.add_gvn_pass(); // Eliminate redundant calculations
-        // fpm.add_cfg_simplification_pass(); // Simplify the control flow graph
-        // fpm.add_basic_alias_analysis_pass(); // Analyze memory accesses
-        // fpm.add_promote_memory_to_register_pass(); // Promote stack allocations to registers
-        // fpm.add_merge_functions_pass(); // Merge duplicate functions
-        // fpm.add_aggressive_dce_pass(); // Aggressively eliminate dead code
-        // fpm.add_instruction_simplify_pass(); // Simplify instructions
-        // fpm.add_dead_arg_elimination_pass(); // Eliminate unused function arguments
-        // fpm.add_dead_store_elimination_pass(); // Eliminate unused stores
-        // fpm.add_partially_inline_lib_calls_pass(); // Partially inline library calls
-        // fpm.add_ind_var_simplify_pass(); // Simplify induction variables
-        // fpm.add_loop_unroll_pass(); // Unroll loops
-        // fpm.add_loop_unswitch_pass(); // Unswitch loops
-        // fpm.add_loop_vectorize_pass(); // Vectorize loops
-        // fpm.add_loop_deletion_pass(); // Delete dead loops
-        // fpm.add_memcpy_optimize_pass(); // Eliminate redundant memcpy calls
-        // fpm.add_constant_merge_pass(); // Eliminate duplicate constants
-        // fpm.add_strip_symbol_pass(); // Strip symbol information
+        fpm.add_instruction_combining_pass();
+        fpm.add_reassociate_pass(); // Reorder expressions to enable better optimizations
+        fpm.add_gvn_pass(); // Eliminate redundant calculations
+        fpm.add_cfg_simplification_pass(); // Simplify the control flow graph
+        fpm.add_basic_alias_analysis_pass(); // Analyze memory accesses
+        fpm.add_promote_memory_to_register_pass(); // Promote stack allocations to registers
+        fpm.add_merge_functions_pass(); // Merge duplicate functions
+        fpm.add_aggressive_dce_pass(); // Aggressively eliminate dead code
+        fpm.add_instruction_simplify_pass(); // Simplify instructions
+        fpm.add_dead_arg_elimination_pass(); // Eliminate unused function arguments
+        fpm.add_dead_store_elimination_pass(); // Eliminate unused stores
+        fpm.add_partially_inline_lib_calls_pass(); // Partially inline library calls
+        fpm.add_ind_var_simplify_pass(); // Simplify induction variables
+        fpm.add_loop_unroll_pass(); // Unroll loops
+        fpm.add_loop_unswitch_pass(); // Unswitch loops
+        fpm.add_loop_vectorize_pass(); // Vectorize loops
+        fpm.add_loop_deletion_pass(); // Delete dead loops
+        fpm.add_memcpy_optimize_pass(); // Eliminate redundant memcpy calls
+        fpm.add_constant_merge_pass(); // Eliminate duplicate constants
+        fpm.add_strip_symbol_pass(); // Strip symbol information
         fpm.add_verifier_pass(); // Verify the module's correctness
 
         fpm.run_on(&self.module);
