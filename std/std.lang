@@ -34,9 +34,10 @@ fn print(input: string) {
     let size: i64 = strlen(input_with_new_line);
 
     let result = write(file_des, buf, size);
+    ~input_with_new_line;
 }
 
-fn eprintln(input: string) {
+fn eprint(input: string) {
     let input_with_new_line = input + "\n";
 
     let file_des = 2;
@@ -44,6 +45,7 @@ fn eprintln(input: string) {
     let size: i64 = strlen(input_with_new_line);
 
     let result = write(file_des, buf, size);
+    ~input_with_new_line;
 }
 
 // A simple function to test if the standard library works
