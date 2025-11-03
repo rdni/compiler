@@ -1,5 +1,5 @@
 print("Reading file 'example.txt':");
-let file_contents = read_file_to_string("example.txt");
+let file_contents = read_file_to_string("examples/example.txt");
 print(file_contents);
 ~file_contents;
 
