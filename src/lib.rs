@@ -163,7 +163,7 @@ mod tests {
             start: start.clone(),
             end: end.clone(),
         };
-        
+
         assert_eq!(span.start.0, 10);
         assert_eq!(span.end.0, 20);
     }

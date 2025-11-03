@@ -12,10 +12,11 @@ use inkwell::{
 
 use crate::{
     ast::{
-        ast::{Expr, ExprType, Type, TypeType},
+        ast::{Expr, ExprType, Type, TypeType, TypeWrapper},
         expressions::{NumberExpr, StringExpr},
         types::{self, Literals, NumberType, StructType},
     },
+    lexer::tokens::{Token, TokenKind},
     type_checker::typed_ast::{
         TypedAssignmentExpr, TypedBinaryExpr, TypedCallExpr, TypedExpr, TypedExprWrapper,
         TypedStructInitExpr, TypedSymbolExpr,
@@ -218,229 +219,13 @@ pub fn gen_expression<'a>(
                 panic!("Type mismatch");
             }
 
-            match left.get_type() {
-                BasicTypeEnum::IntType(_) => match binary_expr.operator.value.as_str() {
-                    "+" => compiler
-                        .builder
-                        .build_int_add(left.into_int_value(), right.into_int_value(), "")
-                        .unwrap()
-                        .into(),
-                    "-" => compiler
-                        .builder
-                        .build_int_sub(left.into_int_value(), right.into_int_value(), "")
-                        .unwrap()
-                        .into(),
-                    "*" => compiler
-                        .builder
-                        .build_int_mul(left.into_int_value(), right.into_int_value(), "")
-                        .unwrap()
-                        .into(),
-                    "/" => compiler
-                        .builder
-                        .build_int_signed_div(left.into_int_value(), right.into_int_value(), "")
-                        .unwrap()
-                        .into(),
-                    "%" => compiler
-                        .builder
-                        .build_int_signed_rem(left.into_int_value(), right.into_int_value(), "")
-                        .unwrap()
-                        .into(),
-                    "==" => compiler
-                        .builder
-                        .build_int_compare(
-                            IntPredicate::EQ,
-                            left.into_int_value(),
-                            right.into_int_value(),
-                            "",
-                        )
-                        .unwrap()
-                        .into(),
-                    "!=" => compiler
-                        .builder
-                        .build_int_compare(
-                            IntPredicate::NE,
-                            left.into_int_value(),
-                            right.into_int_value(),
-                            "",
-                        )
-                        .unwrap()
-                        .into(),
-                    "<" => compiler
-                        .builder
-                        .build_int_compare(
-                            IntPredicate::SLT,
-                            left.into_int_value(),
-                            right.into_int_value(),
-                            "",
-                        )
-                        .unwrap()
-                        .into(),
-                    "<=" => compiler
-                        .builder
-                        .build_int_compare(
-                            IntPredicate::SLE,
-                            left.into_int_value(),
-                            right.into_int_value(),
-                            "",
-                        )
-                        .unwrap()
-                        .into(),
-                    ">" => compiler
-                        .builder
-                        .build_int_compare(
-                            IntPredicate::SGT,
-                            left.into_int_value(),
-                            right.into_int_value(),
-                            "",
-                        )
-                        .unwrap()
-                        .into(),
-                    ">=" => compiler
-                        .builder
-                        .build_int_compare(
-                            IntPredicate::SGE,
-                            left.into_int_value(),
-                            right.into_int_value(),
-                            "",
-                        )
-                        .unwrap()
-                        .into(),
-                    _ => panic!("Invalid operator"),
-                },
-                // The only exposed pointer type is string for now
-                // TODO: Handle other pointer types if needed
-                BasicTypeEnum::PointerType(_) => {
-                    if TypedExpr::get_type(&binary_expr.left).get_type_type()
-                        == TypeType::Literal(Literals::String)
-                    {
-                        if binary_expr.operator.value == "+" {
-                            // Get size of the two strings added together using the strlen function
-                            let size = compiler
-                                .builder
-                                .build_int_add(
-                                    // Create an add
-                                    compiler
-                                        .builder
-                                        .build_call(
-                                            // Get the length of the left string
-                                            compiler.module.get_function("strlen").unwrap(),
-                                            &[left.into()],
-                                            "",
-                                        )
-                                        .unwrap()
-                                        .try_as_basic_value()
-                                        .unwrap_left()
-                                        .into_int_value(),
-                                    compiler
-                                        .builder
-                                        .build_call(
-                                            // Get the length of the right string
-                                            compiler.module.get_function("strlen").unwrap(),
-                                            &[right.into()],
-                                            "",
-                                        )
-                                        .unwrap()
-                                        .try_as_basic_value()
-                                        .unwrap_left()
-                                        .into_int_value(),
-                                    "",
-                                )
-                                .unwrap();
-
-                            let one = compiler.context.i64_type().const_int(1, false);
-                            // Add 1 for the null terminator
-                            let total_size = compiler.builder.build_int_add(size, one, "").unwrap();
-
-                            // Allocate mutable memory for the new string
-                            let new_string = compiler
-                                .builder
-                                .build_array_alloca(compiler.context.i8_type(), total_size, "")
-                                .unwrap();
-
-                            let zero = compiler.context.i8_type().const_int(0, false);
-                            let first_byte_ptr = unsafe {
-                                compiler
-                                    .builder
-                                    .build_gep(
-                                        new_string,
-                                        &[compiler.context.i64_type().const_zero()],
-                                        "",
-                                    )
-                                    .unwrap()
-                            };
-                            compiler.builder.build_store(first_byte_ptr, zero).unwrap();
-
-                            // Copy the left string to the new string
-                            compiler
-                                .builder
-                                .build_call(
-                                    compiler.module.get_function("strcat").unwrap(),
-                                    &[new_string.into(), left.into()],
-                                    "",
-                                )
-                                .unwrap();
-
-                            // Copy the right string to the new string
-                            compiler
-                                .builder
-                                .build_call(
-                                    compiler.module.get_function("strcat").unwrap(),
-                                    &[new_string.into(), right.into()],
-                                    "",
-                                )
-                                .unwrap();
-
-                            // Return the new string
-                            return new_string.into();
-                        } else if binary_expr.operator.value == "==" {
-                            let result = compiler
-                                .builder
-                                .build_call(
-                                    compiler.module.get_function("strcmp").unwrap(),
-                                    &[
-                                        gen_expression(compiler, &binary_expr.left, None).into(),
-                                        gen_expression(compiler, &binary_expr.right, None).into(),
-                                    ],
-                                    "",
-                                )
-                                .unwrap();
-                            return compiler
-                                .builder
-                                .build_int_compare(
-                                    IntPredicate::EQ,
-                                    result.try_as_basic_value().left().unwrap().into_int_value(),
-                                    compiler.context.i32_type().const_zero(), // strcmp returns 0 when equal
-                                    "",
-                                )
-                                .unwrap()
-                                .into();
-                        } else if binary_expr.operator.value == "!=" {
-                            let result = compiler
-                                .builder
-                                .build_call(
-                                    compiler.module.get_function("strcmp").unwrap(),
-                                    &[left.into(), right.into()],
-                                    "",
-                                )
-                                .unwrap();
-                            return compiler
-                                .builder
-                                .build_int_compare(
-                                    IntPredicate::NE, // Not equal
-                                    result.try_as_basic_value().left().unwrap().into_int_value(),
-                                    compiler.context.i32_type().const_zero(),
-                                    "",
-                                )
-                                .unwrap()
-                                .into();
-                        } else {
-                            panic!("Invalid operator for string");
-                        }
-                    }
-                    panic!("Unknown pointer type");
-                }
-                _ => panic!("Invalid type for binary operation"),
-            }
+            build_binary_operation(
+                compiler,
+                &binary_expr.operator,
+                left,
+                right,
+                TypedExpr::get_type(&binary_expr.left),
+            )
         }
         ExprType::Assignment => {
             let assignment_expr = expression
@@ -449,7 +234,7 @@ pub fn gen_expression<'a>(
                 .unwrap();
 
             // Check if the compiler should change type checking based on the stdlib
-            let value = if TypedExpr::get_type(&assignment_expr.value).get_type_type()
+            let mut value = if TypedExpr::get_type(&assignment_expr.value).get_type_type()
                 != assignment_expr.value_type.get_type_type()
             {
                 gen_expression(
@@ -494,9 +279,24 @@ pub fn gen_expression<'a>(
                     .builder
                     .build_struct_gep(struct_value.into_pointer_value(), index, "")
                     .unwrap();
-                compiler.builder.build_store(field_ptr, value).unwrap();
 
-                return value;
+                if assignment_expr.operator.kind != TokenKind::Assignment {
+                    let current_value = compiler.builder.build_load(field_ptr, "").unwrap();
+                    let new_value = build_binary_operation(
+                        compiler,
+                        &assignment_expr.operator,
+                        current_value,
+                        value,
+                        assignment_expr.value_type.clone_wrapper(),
+                    );
+                    compiler.builder.build_store(field_ptr, new_value).unwrap();
+
+                    return new_value;
+                } else {
+                    compiler.builder.build_store(field_ptr, value).unwrap();
+
+                    return value;
+                }
             } else {
                 let alloca = compiler
                     .named_allocas
@@ -509,6 +309,18 @@ pub fn gen_expression<'a>(
                             .value,
                     )
                     .expect("Variable not found");
+
+                if assignment_expr.operator.kind != TokenKind::Assignment {
+                    let current_value = compiler.builder.build_load(*alloca, "").unwrap();
+                    value = build_binary_operation(
+                        compiler,
+                        &assignment_expr.operator,
+                        current_value,
+                        value,
+                        assignment_expr.value_type.clone_wrapper(),
+                    );
+                }
+
                 compiler.builder.build_store(*alloca, value).unwrap();
             }
 
@@ -538,5 +350,252 @@ pub fn gen_expression<'a>(
             struct_value.into()
         }
         _ => todo!(),
+    }
+}
+
+fn build_binary_operation<'a>(
+    compiler: &Compiler<'a>,
+    operator: &Token,
+    left: BasicValueEnum<'a>,
+    right: BasicValueEnum<'a>,
+    internal_type: TypeWrapper,
+) -> BasicValueEnum<'a> {
+    let operator = match operator.kind {
+        TokenKind::PlusEquals => Token {
+            kind: TokenKind::Plus,
+            value: String::from("+"),
+            ..operator.clone()
+        },
+        TokenKind::MinusEquals => Token {
+            kind: TokenKind::Dash,
+            value: String::from("-"),
+            ..operator.clone()
+        },
+        TokenKind::StarEquals => Token {
+            kind: TokenKind::Star,
+            value: String::from("*"),
+            ..operator.clone()
+        },
+        TokenKind::SlashEquals => Token {
+            kind: TokenKind::Slash,
+            value: String::from("/"),
+            ..operator.clone()
+        },
+        _ => operator.clone(),
+    };
+
+    match left.get_type() {
+        BasicTypeEnum::IntType(_) => match operator.value.as_str() {
+            "+" => compiler
+                .builder
+                .build_int_add(left.into_int_value(), right.into_int_value(), "")
+                .unwrap()
+                .into(),
+            "-" => compiler
+                .builder
+                .build_int_sub(left.into_int_value(), right.into_int_value(), "")
+                .unwrap()
+                .into(),
+            "*" => compiler
+                .builder
+                .build_int_mul(left.into_int_value(), right.into_int_value(), "")
+                .unwrap()
+                .into(),
+            "/" => compiler
+                .builder
+                .build_int_signed_div(left.into_int_value(), right.into_int_value(), "")
+                .unwrap()
+                .into(),
+            "%" => compiler
+                .builder
+                .build_int_signed_rem(left.into_int_value(), right.into_int_value(), "")
+                .unwrap()
+                .into(),
+            "==" => compiler
+                .builder
+                .build_int_compare(
+                    IntPredicate::EQ,
+                    left.into_int_value(),
+                    right.into_int_value(),
+                    "",
+                )
+                .unwrap()
+                .into(),
+            "!=" => compiler
+                .builder
+                .build_int_compare(
+                    IntPredicate::NE,
+                    left.into_int_value(),
+                    right.into_int_value(),
+                    "",
+                )
+                .unwrap()
+                .into(),
+            "<" => compiler
+                .builder
+                .build_int_compare(
+                    IntPredicate::SLT,
+                    left.into_int_value(),
+                    right.into_int_value(),
+                    "",
+                )
+                .unwrap()
+                .into(),
+            "<=" => compiler
+                .builder
+                .build_int_compare(
+                    IntPredicate::SLE,
+                    left.into_int_value(),
+                    right.into_int_value(),
+                    "",
+                )
+                .unwrap()
+                .into(),
+            ">" => compiler
+                .builder
+                .build_int_compare(
+                    IntPredicate::SGT,
+                    left.into_int_value(),
+                    right.into_int_value(),
+                    "",
+                )
+                .unwrap()
+                .into(),
+            ">=" => compiler
+                .builder
+                .build_int_compare(
+                    IntPredicate::SGE,
+                    left.into_int_value(),
+                    right.into_int_value(),
+                    "",
+                )
+                .unwrap()
+                .into(),
+            _ => panic!("Invalid operator {:?}", (operator, left, right, internal_type)),
+        },
+        // The only exposed pointer type is string for now
+        // TODO: Handle other pointer types if needed
+        BasicTypeEnum::PointerType(_) => {
+            if internal_type.get_type_type() == TypeType::Literal(Literals::String) {
+                if operator.value == "+" {
+                    // Get size of the two strings added together using the strlen function
+                    let size = compiler
+                        .builder
+                        .build_int_add(
+                            // Create an add
+                            compiler
+                                .builder
+                                .build_call(
+                                    // Get the length of the left string
+                                    compiler.module.get_function("strlen").unwrap(),
+                                    &[left.into()],
+                                    "",
+                                )
+                                .unwrap()
+                                .try_as_basic_value()
+                                .unwrap_left()
+                                .into_int_value(),
+                            compiler
+                                .builder
+                                .build_call(
+                                    // Get the length of the right string
+                                    compiler.module.get_function("strlen").unwrap(),
+                                    &[right.into()],
+                                    "",
+                                )
+                                .unwrap()
+                                .try_as_basic_value()
+                                .unwrap_left()
+                                .into_int_value(),
+                            "",
+                        )
+                        .unwrap();
+
+                    let one = compiler.context.i64_type().const_int(1, false);
+                    // Add 1 for the null terminator
+                    let total_size = compiler.builder.build_int_add(size, one, "").unwrap();
+
+                    // Allocate mutable memory for the new string
+                    let new_string = compiler
+                        .builder
+                        .build_array_alloca(compiler.context.i8_type(), total_size, "")
+                        .unwrap();
+
+                    let zero = compiler.context.i8_type().const_int(0, false);
+                    let first_byte_ptr = unsafe {
+                        compiler
+                            .builder
+                            .build_gep(new_string, &[compiler.context.i64_type().const_zero()], "")
+                            .unwrap()
+                    };
+                    compiler.builder.build_store(first_byte_ptr, zero).unwrap();
+
+                    // Copy the left string to the new string
+                    compiler
+                        .builder
+                        .build_call(
+                            compiler.module.get_function("strcat").unwrap(),
+                            &[new_string.into(), left.into()],
+                            "",
+                        )
+                        .unwrap();
+
+                    // Copy the right string to the new string
+                    compiler
+                        .builder
+                        .build_call(
+                            compiler.module.get_function("strcat").unwrap(),
+                            &[new_string.into(), right.into()],
+                            "",
+                        )
+                        .unwrap();
+
+                    // Return the new string
+                    return new_string.into();
+                } else if operator.value == "==" {
+                    let result = compiler
+                        .builder
+                        .build_call(
+                            compiler.module.get_function("strcmp").unwrap(),
+                            &[left.into(), right.into()],
+                            "",
+                        )
+                        .unwrap();
+                    return compiler
+                        .builder
+                        .build_int_compare(
+                            IntPredicate::EQ,
+                            result.try_as_basic_value().left().unwrap().into_int_value(),
+                            compiler.context.i32_type().const_zero(), // strcmp returns 0 when equal
+                            "",
+                        )
+                        .unwrap()
+                        .into();
+                } else if operator.value == "!=" {
+                    let result = compiler
+                        .builder
+                        .build_call(
+                            compiler.module.get_function("strcmp").unwrap(),
+                            &[left.into(), right.into()],
+                            "",
+                        )
+                        .unwrap();
+                    return compiler
+                        .builder
+                        .build_int_compare(
+                            IntPredicate::NE, // Not equal
+                            result.try_as_basic_value().left().unwrap().into_int_value(),
+                            compiler.context.i32_type().const_zero(),
+                            "",
+                        )
+                        .unwrap()
+                        .into();
+                } else {
+                    panic!("Invalid operator for string");
+                }
+            }
+            panic!("Unknown pointer type");
+        }
+        _ => panic!("Invalid type for binary operation"),
     }
 }

@@ -45,7 +45,7 @@ impl TypedStmtWrapper {
     pub fn new<T: TypedStmt + 'static>(stmt: T) -> Self {
         TypedStmtWrapper(Box::new(stmt))
     }
-    
+
     /// Consumes the wrapper and returns the inner typed statement.
     pub fn get_inner(self) -> Box<dyn TypedStmt> {
         self.0

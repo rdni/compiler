@@ -7,10 +7,22 @@ print("Hello, World!");
 
 let test = 1;
 while test < 100 {
-    test = test + 1;
-    if test == 50 {
-        print("It's 50!");
+
+    let output = "";
+    if test % 3 == 0 {
+        output += "Fizz";
     }
+    if test % 5 == 0 {
+        output += "Buzz";
+    }
+
+    if output == "" {
+        print(itoa(test));
+    } else {
+        print(output);
+    }
+
+    test += 1;
 }
 
 print("Enter in something: ");

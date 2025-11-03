@@ -19,11 +19,11 @@ fn test_compile_simple_program() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     // Compile to LLVM IR
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
@@ -31,7 +31,7 @@ fn test_compile_simple_program() {
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -49,18 +49,18 @@ fn test_compile_function() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -78,18 +78,18 @@ fn test_compile_struct() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -110,22 +110,23 @@ fn test_compile_control_flow() {
         } else {
             x = x - 1;
         }
-    "#.to_string();
+    "#
+    .to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -144,22 +145,23 @@ fn test_compile_while_loop() {
         while i < 10 {
             i = i + 1;
         }
-    "#.to_string();
+    "#
+    .to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -181,22 +183,23 @@ fn test_compile_struct_with_methods() {
         fn increment(c: Counter) -> i32 {
             return c.value + 1;
         }
-    "#.to_string();
+    "#
+    .to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -214,18 +217,18 @@ fn test_compile_nested_expressions() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -243,18 +246,18 @@ fn test_compile_string_concatenation() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -272,22 +275,23 @@ fn test_compile_member_access() {
         struct Point { x: i32, y: i32 }
         let p = new Point { x: 10, y: 20 };
         let x_val = p.x;
-    "#.to_string();
+    "#
+    .to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -311,22 +315,23 @@ fn test_compile_multiple_functions() {
         }
         
         let result = add(10, subtract(20, 5));
-    "#.to_string();
+    "#
+    .to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -367,22 +372,23 @@ fn test_compile_assignment_operators() {
         let x = 10;
         x += 5;
         x -= 3;
-    "#.to_string();
+    "#
+    .to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -400,18 +406,18 @@ fn test_compile_empty_source() {
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,
@@ -429,22 +435,23 @@ fn test_compile_comments() {
         // This is a comment
         let x = 42; // inline comment
         // Another comment
-    "#.to_string();
+    "#
+    .to_string();
     let tokens = tokenize(source, Some("test.lang".to_string())).unwrap();
     let (_, ast) = parse(tokens, std::rc::Rc::new("test.lang".to_string()));
     assert!(ast.is_ok());
-    
+
     let ast = ast.unwrap();
     let (type_checker, error) = type_check(ast, None, false);
     assert!(error.is_none(), "Type checking should succeed");
-    
+
     let context = Context::create();
     let typed_ast = type_checker.typed_ast[0]
         .as_any()
         .downcast_ref::<TypedBlockStmt>()
         .unwrap()
         .clone();
-    
+
     let result = compile(
         typed_ast,
         type_checker,

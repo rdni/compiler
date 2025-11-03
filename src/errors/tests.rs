@@ -14,7 +14,7 @@ fn test_error_creation() {
         },
         Position(10, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "UnrecognisedToken");
 }
 
@@ -27,7 +27,7 @@ fn test_error_position() {
         },
         pos.clone(),
     );
-    
+
     assert_eq!(error.get_position().0, 42);
 }
 
@@ -39,7 +39,7 @@ fn test_unexpected_token_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "UnexpectedToken");
 }
 
@@ -52,7 +52,7 @@ fn test_type_mismatch_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "TypeMatchError");
 }
 
@@ -64,7 +64,7 @@ fn test_variable_not_declared_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "VariableNotDeclared");
 }
 
@@ -76,7 +76,7 @@ fn test_variable_already_declared_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "VariableAlreadyDeclared");
 }
 
@@ -88,7 +88,7 @@ fn test_function_already_declared_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "FunctionAlreadyDeclared");
 }
 
@@ -100,7 +100,7 @@ fn test_unknown_type_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "UnknownType");
 }
 
@@ -112,7 +112,7 @@ fn test_error_tip_none() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert!(matches!(error.get_tip(), ErrorTip::None));
 }
 
@@ -124,7 +124,7 @@ fn test_error_tip_suggestion() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     match error.get_tip() {
         ErrorTip::Suggestion(_) => (),
         _ => panic!("Expected suggestion tip"),
@@ -135,7 +135,7 @@ fn test_error_tip_suggestion() {
 fn test_error_tip_display() {
     let tip = ErrorTip::Suggestion("Try this instead".to_string());
     assert_eq!(tip.to_string(), "Try this instead");
-    
+
     let tip = ErrorTip::None;
     assert_eq!(tip.to_string(), "");
 }
@@ -149,7 +149,7 @@ fn test_unexpected_arguments_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "UnexpectedArguments");
 }
 
@@ -162,7 +162,7 @@ fn test_missing_arguments_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "MissingArguments");
 }
 
@@ -174,7 +174,7 @@ fn test_variable_already_dropped_error() {
         },
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "VariableAlreadyDropped");
 }
 
@@ -184,7 +184,6 @@ fn test_not_implemented_error() {
         ErrorImpl::NotImplementedError,
         Position(0, Rc::new("test.lang".to_string())),
     );
-    
+
     assert_eq!(error.get_error_name(), "NotImplementedError");
 }
-

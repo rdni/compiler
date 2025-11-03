@@ -46,7 +46,6 @@ fn main() {
         panic!("Incorrect arguments provided!");
     }
 
-
     if !PathBuf::from("build").exists() {
         create_dir("build").unwrap();
     } else {

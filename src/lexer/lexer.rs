@@ -204,6 +204,14 @@ impl Lexer {
                     handler: MK_DEFAULT_HANDLER!(TokenKind::MinusEquals, "-="),
                 },
                 RegexPattern {
+                    regex: Regex::new("\\*=").unwrap(),
+                    handler: MK_DEFAULT_HANDLER!(TokenKind::StarEquals, "*="),
+                },
+                RegexPattern {
+                    regex: Regex::new("/=").unwrap(),
+                    handler: MK_DEFAULT_HANDLER!(TokenKind::SlashEquals, "/="),
+                },
+                RegexPattern {
                     regex: Regex::new("\\+").unwrap(),
                     handler: MK_DEFAULT_HANDLER!(TokenKind::Plus, "+"),
                 },
