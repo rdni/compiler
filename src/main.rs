@@ -40,6 +40,13 @@ use compiler::{
 use inkwell::context::Context;
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() != 2 {
+        panic!("Incorrect arguments provided!");
+    }
+
+
     if !PathBuf::from("build").exists() {
         create_dir("build").unwrap();
     } else {
@@ -51,11 +58,14 @@ fn main() {
         }
     }
 
-    let args: Vec<String> = env::args().collect();
+    let file_path: &str = &args[1];
+    let file_name = if file_path.contains("/") {
+        file_path.split("/").last().unwrap()
+    } else {
+        file_path
+    };
 
-    if args.len() != 2 {
-        panic!("Incorrect arguments provided!");
-    }
+    let file_contents = read_to_string(file_path).expect("Failed to read file!");
 
     let context = Context::create();
     let stdlib = compile_stdlib(
@@ -66,23 +76,12 @@ fn main() {
 
     let stdlib_functions = convert_stdlib_functions(&stdlib);
 
-    let file_path: &str = &args[1];
-    let file_name = if file_path.contains("/") {
-        file_path.split("/").last().unwrap()
-    } else {
-        file_path
-    };
-
     let start = Instant::now();
-
-    let mut path_buf_string = env::current_dir().unwrap().into_os_string();
-    path_buf_string.push(file_path);
-    let file_contents = read_to_string(path_buf_string.clone()).expect("Failed to read file!");
 
     let tokens = tokenize(file_contents, Some(String::from(file_name)));
 
     if tokens.is_err() {
-        display_error(tokens.err().unwrap(), PathBuf::from(path_buf_string));
+        display_error(tokens.err().unwrap(), PathBuf::from(file_path));
         panic!()
     }
 
@@ -94,7 +93,7 @@ fn main() {
     println!("Parsed in {:?}", parse_start.elapsed());
 
     if parsed_ast.1.is_err() {
-        display_error(parsed_ast.1.err().unwrap(), PathBuf::from(path_buf_string));
+        display_error(parsed_ast.1.err().unwrap(), PathBuf::from(file_path));
         panic!()
     }
 
@@ -106,7 +105,7 @@ fn main() {
     println!("Type checked in {:?}", type_check_start.elapsed());
 
     if type_checker.1.is_some() {
-        display_error(type_checker.1.unwrap(), PathBuf::from(path_buf_string));
+        display_error(type_checker.1.unwrap(), PathBuf::from(file_path));
         panic!()
     }
 
