@@ -1,37 +1,49 @@
-print("Reading file 'example.txt':");
-let file_contents = read_file_to_string("examples/example.txt");
-print(file_contents);
-~file_contents;
-
 print("Hello, World!");
 
+
+print("Reading file 'example.txt':");
+// Read a file to string
+let file_contents = read_file_to_string("examples/example.txt");
+print(file_contents);
+// Free the string (call the destructor)
+~file_contents;
+
+// FizzBuzz from 1 to 99
 let test = 1;
 while test < 100 {
-
+    // Create an empty string
     let output = "";
     if test % 3 == 0 {
+        // Append "Fizz" to the string if divisible by 3
         output += "Fizz";
     }
     if test % 5 == 0 {
+        // Append "Buzz" to the string if divisible by 5
         output += "Buzz";
     }
 
+    // If the string is still empty, print the number
     if output == "" {
         print(itoa(test));
     } else {
         print(output);
     }
 
+    // Increment test
     test += 1;
+
+    // Here there is no need to free 'output' because it is stored on the stack
 }
 
 print("Enter in something: ");
 
+// Get user input
 let user_input = input();
 print("You entered " + user_input);
-
+// Free the string (call the destructor)
 ~user_input;
 
+// Define question struct
 struct Question {
     question_text: string,
     option_1: string,
@@ -41,6 +53,7 @@ struct Question {
     answer: string
 }
 
+// Function to ask a question and return if the answer was correct
 fn ask_question(question: Question) -> bool {
     print(question.question_text);
     print("A: " + question.option_1);
@@ -51,11 +64,13 @@ fn ask_question(question: Question) -> bool {
     let user_input = input();
     let is_correct = user_input == question.answer;
 
+    // Free the string (call the destructor)
     ~user_input;
 
     return is_correct;
 }
 
+// Create questions
 let question1 = new Question {
     question_text: "What is 1 + 1?",
     option_1: "4",
@@ -82,7 +97,6 @@ let question3 = new Question {
 };
 
 let score = 0;
-
 if ask_question(question1) {
     print("Correct!");
     score = score + 1;
@@ -116,6 +130,7 @@ let a = new Testing {
     e: 5
 };
 
+// Modify fields and print
 let converted_e1 = itoa(a.e);
 print(a.field + " " + converted_e1);
 ~converted_e1;
@@ -127,6 +142,7 @@ let converted_e2 = itoa(a.e);
 print(a.field + " " + converted_e2);
 ~converted_e2;
 
+// Test special characters
 a.field = ".\n.\x3F.\t.";
 
 print(a.field);
